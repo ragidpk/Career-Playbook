@@ -56,21 +56,35 @@ export async function analyzeResume(filePath: string, fileName: string) {
     console.log('File Name:', fileName);
   }
 
-  const { data, error } = await supabase.functions.invoke('analyze-resume', {
-    body: { filePath, fileName },
-  });
+  // Get the current session token for authentication
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (isDevelopment) {
-    console.log('Edge Function Response:', { data, error });
+  if (!session?.access_token) {
+    throw new Error('Authentication required. Please sign in.');
   }
 
-  if (error) {
+  // Call Vercel API route instead of Supabase Edge Function
+  // This uses Node.js runtime where pdf-parse works natively
+  const response = await fetch('/api/analyze-resume', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ filePath, fileName }),
+  });
+
+  const data = await response.json();
+
+  if (isDevelopment) {
+    console.log('Vercel API Response:', { status: response.status, data });
+  }
+
+  if (!response.ok) {
     if (isDevelopment) {
-      console.error('Edge Function Error:', error);
-      console.error('Error message:', error.message);
-      console.error('Error context:', error.context);
+      console.error('Vercel API Error:', response.status, data);
     }
-    throw error;
+    throw new Error(data.error || 'Resume analysis failed');
   }
 
   if (data?.error) {

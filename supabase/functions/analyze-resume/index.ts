@@ -1,7 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-// @deno-types="npm:@types/pdfjs-dist"
-import * as pdfjsLib from 'npm:pdfjs-dist@4.0.379/legacy/build/pdf.mjs';
+import PDF from 'https://esm.sh/pdf-parse@1.1.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -341,45 +340,36 @@ serve(async (req) => {
 
 async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
   try {
-    console.log('Loading PDF document...');
+    console.log('Extracting text from PDF using pdf-parse library...');
 
-    // Convert ArrayBuffer to Uint8Array for pdfjs
+    // Convert ArrayBuffer to Buffer for pdf-parse
     const uint8Array = new Uint8Array(buffer);
+    const nodeBuffer = Buffer.from(uint8Array);
 
-    // Load the PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
-    const pdf = await loadingTask.promise;
+    // Parse PDF using pdf-parse library
+    const data = await PDF(nodeBuffer);
 
-    console.log(`PDF loaded. Total pages: ${pdf.numPages}`);
+    console.log(`PDF parsed successfully. Pages: ${data.numpages}`);
+    console.log(`Extracted text length: ${data.text.length} characters`);
 
-    // Extract text from all pages
-    const textParts: string[] = [];
+    // Validate extracted text
+    if (!data.text || data.text.trim().length < 100) {
+      // Try fallback regex parser
+      console.warn('pdf-parse extracted insufficient text, trying fallback...');
+      const fallbackText = await fallbackPDFExtraction(buffer);
 
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      console.log(`Extracting text from page ${pageNum}...`);
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
+      if (!fallbackText || fallbackText.length < 100) {
+        throw new AppError(
+          'Insufficient PDF text: ' + (fallbackText?.length || 0) + ' chars',
+          400,
+          'Unable to extract text from PDF. This may be a scanned image or encrypted PDF. Please try a different file with selectable text.'
+        );
+      }
 
-      // Concatenate all text items
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-
-      textParts.push(pageText);
+      return fallbackText;
     }
 
-    const fullText = textParts.join('\n\n');
-    console.log(`Total extracted text length: ${fullText.length} characters`);
-
-    if (!fullText || fullText.trim().length < 100) {
-      throw new AppError(
-        'Insufficient PDF text: ' + fullText.trim().length + ' chars',
-        400,
-        'PDF does not contain enough text. Please ensure it is not a scanned image.'
-      );
-    }
-
-    return fullText;
+    return data.text.trim();
   } catch (error) {
     console.error('Error extracting text from PDF:', error);
     if (error instanceof Error) {
@@ -387,12 +377,43 @@ async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
       console.error('Error message:', error.message);
     }
     if (error instanceof AppError) throw error;
+
+    // Try fallback parser before giving up
+    console.warn('pdf-parse failed, attempting fallback extraction...');
+    try {
+      const fallbackText = await fallbackPDFExtraction(buffer);
+      if (fallbackText && fallbackText.length >= 100) {
+        console.log('Fallback extraction successful');
+        return fallbackText;
+      }
+    } catch (fallbackError) {
+      console.error('Fallback extraction also failed:', fallbackError);
+    }
+
     throw new AppError(
       `PDF extraction failed: ${error instanceof Error ? error.message : 'unknown'}`,
       500,
-      'Failed to read PDF content. Please try again with a different file.'
+      'Failed to read PDF content. This may be a complex, scanned, or encrypted PDF. Please try a different file.'
     );
   }
+}
+
+// Fallback regex-based extraction (for when pdf-parse fails)
+async function fallbackPDFExtraction(buffer: ArrayBuffer): Promise<string> {
+  const uint8Array = new Uint8Array(buffer);
+  const decoder = new TextDecoder('utf-8', { fatal: false });
+  const text = decoder.decode(uint8Array);
+
+  // Extract text from common PDF patterns
+  const parenthesisMatches = text.match(/\(([^)]+)\)/g) || [];
+  const extractedText = parenthesisMatches
+    .map(match => match.slice(1, -1))
+    .filter(t => t.length > 2 && /[a-zA-Z]/.test(t))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return extractedText;
 }
 
 async function analyzeResumeWithOpenAI(resumeText: string, apiKey: string): Promise<ResumeAnalysis> {
