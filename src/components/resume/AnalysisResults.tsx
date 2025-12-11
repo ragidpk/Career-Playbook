@@ -36,6 +36,7 @@ interface AnalysisResultsProps {
     ninety_day_strategy?: NinetyDayStrategy;
   };
   remainingAnalyses: number;
+  userName?: string;
 }
 
 type SectionKey = 'strengths' | 'improvements' | 'recommendations' | 'roles' | 'strategy' | 'plan';
@@ -47,7 +48,7 @@ const EXPERIENCE_COLORS: Record<string, { bg: string; text: string }> = {
   'Executive': { bg: 'bg-amber-100', text: 'text-amber-800' },
 };
 
-export default function AnalysisResults({ analysis, remainingAnalyses }: AnalysisResultsProps) {
+export default function AnalysisResults({ analysis, remainingAnalyses, userName }: AnalysisResultsProps) {
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(
     new Set(['strengths', 'improvements', 'recommendations'])
   );
@@ -83,6 +84,13 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
       {/* Executive Summary Card */}
       <Card>
         <div className="p-6">
+          {/* User Name Header */}
+          {userName && (
+            <div className="mb-4 pb-4 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Resume Analysis for {userName}</h2>
+            </div>
+          )}
+
           <div className="flex flex-col lg:flex-row lg:items-start gap-6">
             {/* ATS Score */}
             <div className="flex-shrink-0">

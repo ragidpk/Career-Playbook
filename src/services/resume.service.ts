@@ -157,3 +157,41 @@ export async function checkUsageLimit(userId: string) {
     usageCount
   };
 }
+
+/**
+ * Delete a resume analysis record
+ * Also deletes the associated file from storage
+ * @param analysisId The ID of the analysis to delete
+ * @param filePath The storage path of the resume file
+ */
+export async function deleteAnalysis(analysisId: string, filePath: string): Promise<void> {
+  if (isDevelopment) {
+    console.log('Deleting analysis:', analysisId, 'and file:', filePath);
+  }
+
+  // Delete the file from storage first
+  if (filePath) {
+    const { error: storageError } = await supabase.storage
+      .from('resumes')
+      .remove([filePath]);
+
+    if (storageError) {
+      console.error('Failed to delete file from storage:', storageError);
+      // Continue anyway - we still want to delete the DB record
+    }
+  }
+
+  // Delete the analysis record from database
+  const { error: dbError } = await supabase
+    .from('resume_analyses')
+    .delete()
+    .eq('id', analysisId);
+
+  if (dbError) {
+    throw new Error('Failed to delete analysis record');
+  }
+
+  if (isDevelopment) {
+    console.log('Analysis deleted successfully');
+  }
+}

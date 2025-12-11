@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { uploadResume, analyzeResume, getAnalysisHistory, checkUsageLimit } from '../services/resume.service';
+import { uploadResume, analyzeResume, getAnalysisHistory, checkUsageLimit, deleteAnalysis } from '../services/resume.service';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import AnalysisResults from '../components/resume/AnalysisResults';
 import AnalysisHistory from '../components/resume/AnalysisHistory';
@@ -16,6 +16,7 @@ interface NinetyDayStrategy {
 interface Analysis {
   id: string;
   file_name: string;
+  file_url: string;
   ats_score: number;
   analysis_date: string;
   strengths: string[];
@@ -146,6 +147,37 @@ export default function Resume() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleDeleteAnalysis = async (analysisId: string, filePath: string) => {
+    if (!user) return;
+
+    try {
+      await deleteAnalysis(analysisId, filePath);
+
+      // Remove from local state
+      setHistory(prev => prev.filter(a => a.id !== analysisId));
+
+      // Clear current analysis if it was deleted
+      if (currentAnalysis?.id === analysisId) {
+        const remaining = history.filter(a => a.id !== analysisId);
+        setCurrentAnalysis(remaining.length > 0 ? remaining[0] : null);
+      }
+
+      setToast({
+        message: 'Analysis deleted successfully',
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Error deleting analysis:', error);
+      setToast({
+        message: 'Failed to delete analysis. Please try again.',
+        type: 'error',
+      });
+    }
+  };
+
+  // Get user's full name
+  const userFullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -215,6 +247,7 @@ export default function Resume() {
               <AnalysisResults
                 analysis={currentAnalysis}
                 remainingAnalyses={remainingAnalyses}
+                userName={userFullName}
               />
             )}
 
@@ -246,7 +279,11 @@ export default function Resume() {
 
           {/* Right Column - History */}
           <div className="lg:col-span-1">
-            <AnalysisHistory analyses={history} onSelectAnalysis={handleSelectAnalysis} />
+            <AnalysisHistory
+              analyses={history}
+              onSelectAnalysis={handleSelectAnalysis}
+              onDeleteAnalysis={handleDeleteAnalysis}
+            />
           </div>
         </div>
       </div>

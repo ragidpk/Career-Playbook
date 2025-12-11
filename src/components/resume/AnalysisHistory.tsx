@@ -1,29 +1,59 @@
 import { useState } from 'react';
-import { FileText, Calendar, TrendingUp } from 'lucide-react';
+import { FileText, Calendar, TrendingUp, Trash2, Globe } from 'lucide-react';
 import Card from '../shared/Card';
 import ATSScore from './ATSScore';
 
 interface Analysis {
   id: string;
   file_name: string;
+  file_url: string;
   ats_score: number;
   analysis_date: string;
   strengths: string[];
   gaps: string[];
   recommendations: string[];
+  target_country?: string;
 }
 
 interface AnalysisHistoryProps {
   analyses: Analysis[];
   onSelectAnalysis: (analysis: Analysis) => void;
+  onDeleteAnalysis?: (analysisId: string, filePath: string) => Promise<void>;
 }
 
-export default function AnalysisHistory({ analyses, onSelectAnalysis }: AnalysisHistoryProps) {
+export default function AnalysisHistory({ analyses, onSelectAnalysis, onDeleteAnalysis }: AnalysisHistoryProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleSelect = (analysis: Analysis) => {
     setSelectedId(analysis.id);
     onSelectAnalysis(analysis);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, analysisId: string) => {
+    e.stopPropagation();
+    setConfirmDeleteId(analysisId);
+  };
+
+  const handleConfirmDelete = async (e: React.MouseEvent, analysis: Analysis) => {
+    e.stopPropagation();
+    if (!onDeleteAnalysis) return;
+
+    try {
+      setDeletingId(analysis.id);
+      await onDeleteAnalysis(analysis.id, analysis.file_url);
+      setConfirmDeleteId(null);
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleCancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmDeleteId(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -62,11 +92,10 @@ export default function AnalysisHistory({ analyses, onSelectAnalysis }: Analysis
 
         <div className="space-y-3">
           {analyses.map((analysis) => (
-            <button
+            <div
               key={analysis.id}
-              onClick={() => handleSelect(analysis)}
               className={`
-                w-full text-left p-4 rounded-lg border-2 transition-all
+                relative rounded-lg border-2 transition-all
                 ${
                   selectedId === analysis.id
                     ? 'border-primary-500 bg-primary-50'
@@ -74,39 +103,73 @@ export default function AnalysisHistory({ analyses, onSelectAnalysis }: Analysis
                 }
               `}
             >
-              <div className="flex items-center gap-4">
-                {/* ATS Score */}
-                <div className="flex-shrink-0">
-                  <ATSScore score={analysis.ats_score} size="sm" />
+              {/* Confirmation overlay */}
+              {confirmDeleteId === analysis.id && (
+                <div className="absolute inset-0 bg-white/95 rounded-lg flex items-center justify-center z-10 p-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-700 mb-3">Delete this analysis?</p>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        onClick={(e) => handleConfirmDelete(e, analysis)}
+                        disabled={deletingId === analysis.id}
+                        className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {deletingId === analysis.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                      <button
+                        onClick={handleCancelDelete}
+                        className="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 </div>
+              )}
 
-                {/* File Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start gap-2 mb-2">
-                    <FileText className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {analysis.file_name}
-                    </p>
+              <button
+                onClick={() => handleSelect(analysis)}
+                className="w-full text-left p-4"
+              >
+                <div className="flex items-center gap-4">
+                  {/* ATS Score */}
+                  <div className="flex-shrink-0">
+                    <ATSScore score={analysis.ats_score} size="sm" />
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <Calendar className="h-3 w-3" />
-                    <span>{formatDate(analysis.analysis_date)}</span>
-                  </div>
-                </div>
 
-                {/* Quick Stats */}
-                <div className="hidden sm:flex flex-col gap-1 text-xs text-gray-600">
-                  <div className="flex items-center gap-1">
-                    <span className="w-16 text-right">{analysis.strengths.length}</span>
-                    <span>strengths</span>
+                  {/* File Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-2 mb-1">
+                      <FileText className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {analysis.file_name}
+                      </p>
+                    </div>
+                    {analysis.target_country && (
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-1 ml-6">
+                        <Globe className="h-3 w-3" />
+                        <span>{analysis.target_country}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-gray-500 ml-6">
+                      <Calendar className="h-3 w-3" />
+                      <span>{formatDate(analysis.analysis_date)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="w-16 text-right">{analysis.gaps.length}</span>
-                    <span>gaps</span>
-                  </div>
+
+                  {/* Delete Button */}
+                  {onDeleteAnalysis && (
+                    <button
+                      onClick={(e) => handleDeleteClick(e, analysis.id)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                      title="Delete analysis"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-              </div>
-            </button>
+              </button>
+            </div>
           ))}
         </div>
       </div>
