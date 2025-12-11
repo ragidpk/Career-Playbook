@@ -27,6 +27,7 @@ interface AnalysisResultsProps {
     strengths: string[];
     gaps: string[];
     recommendations: string[];
+    candidate_name?: string;
     target_country?: string;
     summary?: string;
     experience_level?: string;
@@ -36,7 +37,6 @@ interface AnalysisResultsProps {
     ninety_day_strategy?: NinetyDayStrategy;
   };
   remainingAnalyses: number;
-  userName?: string;
 }
 
 type SectionKey = 'strengths' | 'improvements' | 'recommendations' | 'roles' | 'strategy' | 'plan';
@@ -48,7 +48,7 @@ const EXPERIENCE_COLORS: Record<string, { bg: string; text: string }> = {
   'Executive': { bg: 'bg-amber-100', text: 'text-amber-800' },
 };
 
-export default function AnalysisResults({ analysis, remainingAnalyses, userName }: AnalysisResultsProps) {
+export default function AnalysisResults({ analysis, remainingAnalyses }: AnalysisResultsProps) {
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(
     new Set(['strengths', 'improvements', 'recommendations'])
   );
@@ -84,10 +84,10 @@ export default function AnalysisResults({ analysis, remainingAnalyses, userName 
       {/* Executive Summary Card */}
       <Card>
         <div className="p-6">
-          {/* User Name Header */}
-          {userName && (
+          {/* Candidate Name Header */}
+          {analysis.candidate_name && (
             <div className="mb-4 pb-4 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Resume Analysis for {userName}</h2>
+              <h2 className="text-xl font-bold text-gray-900">Resume Analysis for {analysis.candidate_name}</h2>
             </div>
           )}
 

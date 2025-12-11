@@ -1,9 +1,10 @@
 -- Migration: Enhance resume_analyses table with additional analysis fields
 -- Date: 2025-01-11
--- Description: Add new columns for enhanced resume analysis (target country, summary, experience level, skills, role recommendations, job search approach, 90-day strategy)
+-- Description: Add new columns for enhanced resume analysis (candidate name, target country, summary, experience level, skills, role recommendations, job search approach, 90-day strategy)
 
 -- Add new columns to resume_analyses table
 ALTER TABLE resume_analyses
+ADD COLUMN IF NOT EXISTS candidate_name TEXT,
 ADD COLUMN IF NOT EXISTS target_country TEXT DEFAULT 'United Arab Emirates',
 ADD COLUMN IF NOT EXISTS summary TEXT,
 ADD COLUMN IF NOT EXISTS experience_level TEXT,
@@ -13,6 +14,7 @@ ADD COLUMN IF NOT EXISTS job_search_approach JSONB DEFAULT '[]'::jsonb,
 ADD COLUMN IF NOT EXISTS ninety_day_strategy JSONB DEFAULT '{}'::jsonb;
 
 -- Add comment for documentation
+COMMENT ON COLUMN resume_analyses.candidate_name IS 'Full name of the candidate extracted from resume';
 COMMENT ON COLUMN resume_analyses.target_country IS 'Target country for job search analysis';
 COMMENT ON COLUMN resume_analyses.summary IS 'Brief executive summary of the candidate profile';
 COMMENT ON COLUMN resume_analyses.experience_level IS 'Entry-level, Mid-level, Senior, or Executive';

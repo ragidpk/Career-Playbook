@@ -20,6 +20,7 @@ interface NinetyDayStrategy {
 }
 
 interface ResumeAnalysis {
+  candidate_name: string;
   ats_score: number;
   summary: string;
   experience_level: string;
@@ -244,6 +245,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         file_name: fileName,
         file_url: filePath,
         target_country: targetCountry,
+        candidate_name: analysis.candidate_name,
         ats_score: analysis.ats_score,
         summary: analysis.summary,
         experience_level: analysis.experience_level,
@@ -283,6 +285,7 @@ async function analyzeResumeWithOpenAI(resumeText: string, apiKey: string, targe
   const prompt = `You are a professional career counselor and resume expert specializing in the ${targetCountry} job market. Analyze the uploaded resume and provide detailed, constructive feedback in JSON format with the following structure:
 
 {
+  "candidate_name": "Full name of the candidate as found in the resume",
   "ats_score": <number between 0-100, how well the resume would perform in automated screening systems>,
   "summary": "A brief 2-3 sentence overview of the candidate's profile",
   "experience_level": "Entry-level/Mid-level/Senior/Executive",
@@ -299,6 +302,8 @@ async function analyzeResumeWithOpenAI(resumeText: string, apiKey: string, targe
     "weeks_9_12": ["Array of 4-5 specific action items for weeks 9-12 (Implementation Phase)"]
   }
 }
+
+IMPORTANT: Extract the candidate's full name from the resume. This is typically at the top of the resume.
 
 Be specific, professional, and constructive in your feedback. Focus on the ${targetCountry} job market context, including cultural considerations, visa requirements, and industry-specific opportunities in that country.
 
@@ -373,6 +378,7 @@ Respond ONLY with valid JSON matching the structure above.`;
     analysis.ats_score = Math.max(0, Math.min(100, analysis.ats_score));
 
     // Set defaults for optional fields
+    analysis.candidate_name = analysis.candidate_name || 'Unknown Candidate';
     analysis.summary = analysis.summary || 'Resume analysis completed.';
     analysis.experience_level = analysis.experience_level || 'Mid-level';
     analysis.skills_identified = analysis.skills_identified || [];

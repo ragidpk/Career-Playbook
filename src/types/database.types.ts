@@ -200,6 +200,7 @@ export interface Database {
           strengths: string[]
           gaps: string[]
           recommendations: string[]
+          candidate_name: string | null
           target_country: string | null
           summary: string | null
           experience_level: string | null
@@ -224,6 +225,7 @@ export interface Database {
           strengths: string[]
           gaps: string[]
           recommendations: string[]
+          candidate_name?: string | null
           target_country?: string | null
           summary?: string | null
           experience_level?: string | null
@@ -248,6 +250,7 @@ export interface Database {
           strengths?: string[]
           gaps?: string[]
           recommendations?: string[]
+          candidate_name?: string | null
           target_country?: string | null
           summary?: string | null
           experience_level?: string | null

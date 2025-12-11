@@ -22,6 +22,7 @@ interface Analysis {
   strengths: string[];
   gaps: string[];
   recommendations: string[];
+  candidate_name?: string;
   target_country?: string;
   summary?: string;
   experience_level?: string;
@@ -175,9 +176,6 @@ export default function Resume() {
     }
   };
 
-  // Get user's full name
-  const userFullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
-
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -247,7 +245,6 @@ export default function Resume() {
               <AnalysisResults
                 analysis={currentAnalysis}
                 remainingAnalyses={remainingAnalyses}
-                userName={userFullName}
               />
             )}
 
