@@ -5,7 +5,13 @@ import ResumeUpload from '../components/resume/ResumeUpload';
 import AnalysisResults from '../components/resume/AnalysisResults';
 import AnalysisHistory from '../components/resume/AnalysisHistory';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
-// Toast component will be used for notifications
+
+interface NinetyDayStrategy {
+  overview: string;
+  weeks_1_4: string[];
+  weeks_5_8: string[];
+  weeks_9_12: string[];
+}
 
 interface Analysis {
   id: string;
@@ -15,7 +21,31 @@ interface Analysis {
   strengths: string[];
   gaps: string[];
   recommendations: string[];
+  target_country?: string;
+  summary?: string;
+  experience_level?: string;
+  skills_identified?: string[];
+  role_recommendations?: string[];
+  job_search_approach?: string[];
+  ninety_day_strategy?: NinetyDayStrategy;
 }
+
+const TARGET_COUNTRIES = [
+  'United Arab Emirates',
+  'Saudi Arabia',
+  'Qatar',
+  'Kuwait',
+  'Bahrain',
+  'Oman',
+  'United States',
+  'United Kingdom',
+  'Canada',
+  'Australia',
+  'Germany',
+  'Singapore',
+  'India',
+  'Other',
+];
 
 export default function Resume() {
   const { user } = useAuth();
@@ -24,6 +54,7 @@ export default function Resume() {
   const [history, setHistory] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [remainingAnalyses, setRemainingAnalyses] = useState(2);
+  const [targetCountry, setTargetCountry] = useState('United Arab Emirates');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const loadData = useCallback(async () => {
@@ -70,8 +101,8 @@ export default function Resume() {
       // Upload resume to storage (returns storage path, not URL)
       const filePath = await uploadResume(file, user.id);
 
-      // Analyze resume with Edge Function
-      const result = await analyzeResume(filePath, file.name);
+      // Analyze resume with Edge Function (including target country)
+      const result = await analyzeResume(filePath, file.name, targetCountry);
 
       if (result.success && result.analysis) {
         setCurrentAnalysis(result.analysis);
@@ -145,6 +176,31 @@ export default function Resume() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Upload & Results */}
           <div className="lg:col-span-2 space-y-8">
+            {/* Target Country Selector */}
+            {(!currentAnalysis || history.length < 2) && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <label htmlFor="targetCountry" className="block text-sm font-medium text-gray-700 mb-2">
+                  Target Job Market
+                </label>
+                <select
+                  id="targetCountry"
+                  value={targetCountry}
+                  onChange={(e) => setTargetCountry(e.target.value)}
+                  disabled={isUploading}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white disabled:bg-gray-100"
+                >
+                  {TARGET_COUNTRIES.map((country) => (
+                    <option key={country} value={country}>
+                      {country}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-sm text-gray-500">
+                  Select your target country for job-market specific recommendations
+                </p>
+              </div>
+            )}
+
             {/* Show upload zone if no current analysis or always visible */}
             {(!currentAnalysis || history.length < 2) && (
               <ResumeUpload

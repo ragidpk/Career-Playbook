@@ -9,13 +9,27 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API
 interface ResumeAnalysisRequest {
   filePath: string;
   fileName: string;
+  targetCountry?: string;
+}
+
+interface NinetyDayStrategy {
+  overview: string;
+  weeks_1_4: string[];
+  weeks_5_8: string[];
+  weeks_9_12: string[];
 }
 
 interface ResumeAnalysis {
   ats_score: number;
+  summary: string;
+  experience_level: string;
   strengths: string[];
-  gaps: string[];
+  improvements: string[];
+  skills_identified: string[];
   recommendations: string[];
+  role_recommendations: string[];
+  job_search_approach: string[];
+  ninety_day_strategy: NinetyDayStrategy;
 }
 
 // CORS headers
@@ -85,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('User authenticated:', user.id);
 
     // 4. Parse request body
-    const { filePath, fileName }: ResumeAnalysisRequest = req.body;
+    const { filePath, fileName, targetCountry = 'United Arab Emirates' }: ResumeAnalysisRequest = req.body;
 
     if (!filePath || !fileName) {
       return res.status(400).json({ error: 'Invalid request. Please try uploading your resume again.' });
@@ -218,21 +232,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('Text extraction successful');
 
     // 9. Call OpenAI for analysis
-    console.log('Calling OpenAI API...');
-    const analysis = await analyzeResumeWithOpenAI(extractedText, OPENAI_API_KEY);
+    console.log('Calling OpenAI API with target country:', targetCountry);
+    const analysis = await analyzeResumeWithOpenAI(extractedText, OPENAI_API_KEY, targetCountry);
     console.log('OpenAI analysis completed. Score:', analysis.ats_score);
 
-    // 10. Save to database
+    // 10. Save to database (with enhanced fields)
     const { data: analysisRecord, error: insertError } = await supabase
       .from('resume_analyses')
       .insert({
         user_id: user.id,
         file_name: fileName,
         file_url: filePath,
+        target_country: targetCountry,
         ats_score: analysis.ats_score,
+        summary: analysis.summary,
+        experience_level: analysis.experience_level,
         strengths: analysis.strengths,
-        gaps: analysis.gaps,
+        gaps: analysis.improvements, // Map to existing column name
+        skills_identified: analysis.skills_identified,
         recommendations: analysis.recommendations,
+        role_recommendations: analysis.role_recommendations,
+        job_search_approach: analysis.job_search_approach,
+        ninety_day_strategy: analysis.ninety_day_strategy,
         analysis_date: new Date().toISOString(),
       })
       .select()
@@ -258,24 +279,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-async function analyzeResumeWithOpenAI(resumeText: string, apiKey: string): Promise<ResumeAnalysis> {
-  const prompt = `You are an expert ATS (Applicant Tracking System) analyzer and career coach. Analyze the following resume and provide:
+async function analyzeResumeWithOpenAI(resumeText: string, apiKey: string, targetCountry: string): Promise<ResumeAnalysis> {
+  const prompt = `You are a professional career counselor and resume expert specializing in the ${targetCountry} job market. Analyze the uploaded resume and provide detailed, constructive feedback in JSON format with the following structure:
 
-1. An ATS score from 0-100 (how well the resume would perform in automated screening systems)
-2. Top 3-5 strengths of the resume
-3. Top 3-5 gaps or areas for improvement
-4. Top 3-5 specific, actionable recommendations
+{
+  "ats_score": <number between 0-100, how well the resume would perform in automated screening systems>,
+  "summary": "A brief 2-3 sentence overview of the candidate's profile",
+  "experience_level": "Entry-level/Mid-level/Senior/Executive",
+  "strengths": ["Array of 3-5 key strengths identified in the resume"],
+  "improvements": ["Array of 3-5 specific areas for improvement"],
+  "skills_identified": ["Array of all technical and soft skills found"],
+  "recommendations": ["Array of 3-5 actionable recommendations to improve the resume"],
+  "role_recommendations": ["Array of 3-5 specific job roles suitable for this candidate in the ${targetCountry} market"],
+  "job_search_approach": ["Array of 5-7 strategic recommendations for approaching job opportunities in ${targetCountry}"],
+  "ninety_day_strategy": {
+    "overview": "Brief overview of the 90-day plan",
+    "weeks_1_4": ["Array of 4-5 specific action items for weeks 1-4 (Foundation Phase)"],
+    "weeks_5_8": ["Array of 4-5 specific action items for weeks 5-8 (Development Phase)"],
+    "weeks_9_12": ["Array of 4-5 specific action items for weeks 9-12 (Implementation Phase)"]
+  }
+}
+
+Be specific, professional, and constructive in your feedback. Focus on the ${targetCountry} job market context, including cultural considerations, visa requirements, and industry-specific opportunities in that country.
 
 Resume content:
-${resumeText.slice(0, 6000)}
+${resumeText.slice(0, 8000)}
 
-Respond ONLY with valid JSON in this exact format:
-{
-  "ats_score": <number between 0-100>,
-  "strengths": ["strength 1", "strength 2", "strength 3"],
-  "gaps": ["gap 1", "gap 2", "gap 3"],
-  "recommendations": ["recommendation 1", "recommendation 2", "recommendation 3"]
-}`;
+Respond ONLY with valid JSON matching the structure above.`;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -288,7 +318,7 @@ Respond ONLY with valid JSON in this exact format:
       messages: [
         {
           role: 'system',
-          content: 'You are an expert ATS analyzer. Always respond with valid JSON only.',
+          content: `You are an expert career counselor and ATS analyzer specializing in the ${targetCountry} job market. Always respond with valid JSON only. Be specific, professional, and constructive.`,
         },
         {
           role: 'user',
@@ -296,7 +326,7 @@ Respond ONLY with valid JSON in this exact format:
         },
       ],
       temperature: 0.7,
-      max_tokens: 1000,
+      max_tokens: 3000,
     }),
   });
 
@@ -314,13 +344,26 @@ Respond ONLY with valid JSON in this exact format:
   }
 
   try {
-    const analysis: ResumeAnalysis = JSON.parse(content);
+    // Clean up the response - remove markdown code blocks if present
+    let cleanedContent = content.trim();
+    if (cleanedContent.startsWith('```json')) {
+      cleanedContent = cleanedContent.slice(7);
+    }
+    if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.slice(3);
+    }
+    if (cleanedContent.endsWith('```')) {
+      cleanedContent = cleanedContent.slice(0, -3);
+    }
+    cleanedContent = cleanedContent.trim();
+
+    const analysis: ResumeAnalysis = JSON.parse(cleanedContent);
 
     // Validate response structure
     if (
       typeof analysis.ats_score !== 'number' ||
       !Array.isArray(analysis.strengths) ||
-      !Array.isArray(analysis.gaps) ||
+      !Array.isArray(analysis.improvements) ||
       !Array.isArray(analysis.recommendations)
     ) {
       throw new Error('Invalid response structure');
@@ -328,6 +371,19 @@ Respond ONLY with valid JSON in this exact format:
 
     // Ensure ATS score is within valid range
     analysis.ats_score = Math.max(0, Math.min(100, analysis.ats_score));
+
+    // Set defaults for optional fields
+    analysis.summary = analysis.summary || 'Resume analysis completed.';
+    analysis.experience_level = analysis.experience_level || 'Mid-level';
+    analysis.skills_identified = analysis.skills_identified || [];
+    analysis.role_recommendations = analysis.role_recommendations || [];
+    analysis.job_search_approach = analysis.job_search_approach || [];
+    analysis.ninety_day_strategy = analysis.ninety_day_strategy || {
+      overview: 'A structured approach to job searching.',
+      weeks_1_4: [],
+      weeks_5_8: [],
+      weeks_9_12: [],
+    };
 
     return analysis;
   } catch {

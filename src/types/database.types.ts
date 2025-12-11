@@ -200,6 +200,18 @@ export interface Database {
           strengths: string[]
           gaps: string[]
           recommendations: string[]
+          target_country: string | null
+          summary: string | null
+          experience_level: string | null
+          skills_identified: string[] | null
+          role_recommendations: string[] | null
+          job_search_approach: string[] | null
+          ninety_day_strategy: {
+            overview: string
+            weeks_1_4: string[]
+            weeks_5_8: string[]
+            weeks_9_12: string[]
+          } | null
           analysis_date: string
           created_at: string
         }
@@ -212,6 +224,18 @@ export interface Database {
           strengths: string[]
           gaps: string[]
           recommendations: string[]
+          target_country?: string | null
+          summary?: string | null
+          experience_level?: string | null
+          skills_identified?: string[] | null
+          role_recommendations?: string[] | null
+          job_search_approach?: string[] | null
+          ninety_day_strategy?: {
+            overview: string
+            weeks_1_4: string[]
+            weeks_5_8: string[]
+            weeks_9_12: string[]
+          } | null
           analysis_date?: string
           created_at?: string
         }
@@ -224,6 +248,18 @@ export interface Database {
           strengths?: string[]
           gaps?: string[]
           recommendations?: string[]
+          target_country?: string | null
+          summary?: string | null
+          experience_level?: string | null
+          skills_identified?: string[] | null
+          role_recommendations?: string[] | null
+          job_search_approach?: string[] | null
+          ninety_day_strategy?: {
+            overview: string
+            weeks_1_4: string[]
+            weeks_5_8: string[]
+            weeks_9_12: string[]
+          } | null
           analysis_date?: string
           created_at?: string
         }

@@ -48,12 +48,13 @@ export async function uploadResume(file: File, userId: string): Promise<string> 
   return data.path;
 }
 
-export async function analyzeResume(filePath: string, fileName: string) {
+export async function analyzeResume(filePath: string, fileName: string, targetCountry: string = 'United Arab Emirates') {
   // SECURITY: Only log in development to avoid PII leakage
   if (isDevelopment) {
     console.log('=== ANALYZE RESUME SERVICE CALLED ===');
     console.log('File Path:', filePath);
     console.log('File Name:', fileName);
+    console.log('Target Country:', targetCountry);
   }
 
   // Get the current session token for authentication
@@ -71,7 +72,7 @@ export async function analyzeResume(filePath: string, fileName: string) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ filePath, fileName }),
+    body: JSON.stringify({ filePath, fileName, targetCountry }),
   });
 
   const data = await response.json();
