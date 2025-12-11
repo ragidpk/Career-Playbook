@@ -49,6 +49,30 @@ export default function Dashboard() {
               Upload Resume &rarr;
             </button>
           </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Company Tracker</h2>
+            <p className="text-gray-600 mb-4">Track companies in your job search</p>
+            <button
+              onClick={() => navigate('/crm')}
+              className="text-primary-500 hover:text-primary-600 font-medium"
+              type="button"
+            >
+              Manage Companies &rarr;
+            </button>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Mentor Collaboration</h2>
+            <p className="text-gray-600 mb-4">Invite mentors to guide your journey</p>
+            <button
+              onClick={() => navigate('/mentors')}
+              className="text-primary-500 hover:text-primary-600 font-medium"
+              type="button"
+            >
+              Invite Mentors &rarr;
+            </button>
+          </div>
         </div>
       </div>
     </div>
