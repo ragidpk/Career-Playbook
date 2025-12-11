@@ -68,6 +68,23 @@ export default function AnalysisHistory({ analyses, onSelectAnalysis, onDeleteAn
     });
   };
 
+  // Extract a readable name from file name (e.g., "Praveen_Koolyst_Resume.pdf" -> "Praveen Koolyst")
+  const getDisplayName = (analysis: Analysis) => {
+    if (analysis.candidate_name) return analysis.candidate_name;
+
+    // Try to extract name from file name
+    const fileName = analysis.file_name;
+    // Remove extension
+    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+    // Remove common suffixes like _Resume, _CV, _2024, etc.
+    const cleanedName = nameWithoutExt
+      .replace(/[_-]?(resume|cv|2024|2025|v\d+|sep|oct|nov|dec|jan|feb|mar|apr|may|jun|jul|aug)$/gi, '')
+      .replace(/[_-]/g, ' ')
+      .trim();
+
+    return cleanedName || fileName;
+  };
+
   if (analyses.length === 0) {
     return (
       <Card>
@@ -140,17 +157,15 @@ export default function AnalysisHistory({ analyses, onSelectAnalysis, onDeleteAn
 
                   {/* File Info */}
                   <div className="flex-1 min-w-0">
-                    {/* Show candidate name as title if available */}
+                    {/* Show candidate name as title */}
                     <p className="text-sm font-medium text-gray-900 truncate mb-1">
-                      {analysis.candidate_name || analysis.file_name}
+                      {getDisplayName(analysis)}
                     </p>
-                    {/* Show file name below if we have candidate name */}
-                    {analysis.candidate_name && (
-                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
-                        <FileText className="h-3 w-3" />
-                        <span className="truncate">{analysis.file_name}</span>
-                      </div>
-                    )}
+                    {/* Show file name below */}
+                    <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                      <FileText className="h-3 w-3" />
+                      <span className="truncate">{analysis.file_name}</span>
+                    </div>
                     {analysis.target_country && (
                       <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
                         <Globe className="h-3 w-3" />

@@ -85,11 +85,11 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
       <Card>
         <div className="p-6">
           {/* Candidate Name Header */}
-          {analysis.candidate_name && (
-            <div className="mb-4 pb-4 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Resume Analysis for {analysis.candidate_name}</h2>
-            </div>
-          )}
+          <div className="mb-4 pb-4 border-b border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900">
+              Resume Analysis{analysis.candidate_name ? ` for ${analysis.candidate_name}` : ''}
+            </h2>
+          </div>
 
           <div className="flex flex-col lg:flex-row lg:items-start gap-6">
             {/* ATS Score */}
