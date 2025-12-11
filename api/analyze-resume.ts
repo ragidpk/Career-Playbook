@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import pdfParse from 'pdf-parse';
 
 // Environment variables (check both standard and VITE_ prefixed versions)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -131,11 +130,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Unable to verify usage limit. Please try again.' });
     }
 
-    if (!quotaResult.success) {
+    // quotaResult is an array since the function returns TABLE
+    const quotaRow = Array.isArray(quotaResult) ? quotaResult[0] : quotaResult;
+    console.log('Quota result:', quotaRow);
+
+    if (!quotaRow || !quotaRow.success) {
+      console.log('Rate limit exceeded. Quota row:', quotaRow);
       return res.status(429).json({ error: 'Rate limit exceeded. You have used all 2 analyses for this month.' });
     }
 
-    const newUsageCount = quotaResult.usage_count;
+    const newUsageCount = quotaRow.usage_count;
     console.log('Rate limit passed. Current usage:', newUsageCount);
 
     // 7. Generate signed URL and download file
@@ -178,19 +182,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
     }
 
-    // 8. Extract text using pdf-parse (Node.js native!)
-    console.log('Extracting text with pdf-parse...');
+    // 8. Extract text using pdf2json (pure Node.js, no DOM dependencies)
+    console.log('Extracting text with pdf2json...');
     let extractedText: string;
 
     try {
-      const pdfData = await pdfParse(pdfBuffer);
-      extractedText = pdfData.text.trim();
-      console.log(`PDF parsed. Pages: ${pdfData.numpages}, Text length: ${extractedText.length}`);
+      extractedText = await extractTextWithPdf2json(pdfBuffer);
+      console.log(`PDF parsed. Text length: ${extractedText.length}`);
     } catch (parseError) {
       console.error('PDF parsing failed:', parseError);
-      return res.status(400).json({
-        error: 'Failed to read PDF content. This may be a scanned or encrypted PDF. Please try a different file.',
-      });
+
+      // Fallback: try basic text extraction from PDF binary
+      console.log('Trying fallback text extraction...');
+      try {
+        extractedText = extractTextFallback(pdfBuffer);
+        console.log(`Fallback extraction got ${extractedText.length} characters`);
+        if (extractedText.length < 100) {
+          throw new Error('Insufficient text from fallback');
+        }
+      } catch (fallbackError) {
+        console.error('Fallback extraction failed:', fallbackError);
+        return res.status(400).json({
+          error: 'Failed to read PDF content. This may be a scanned or encrypted PDF. Please try a different file.',
+        });
+      }
     }
 
     if (!extractedText || extractedText.length < 100) {
@@ -319,4 +334,104 @@ Respond ONLY with valid JSON in this exact format:
     console.error('Error parsing OpenAI response:', content);
     throw new Error('Analysis results could not be processed. Please try again.');
   }
+}
+
+// Extract text using pdf2json (pure Node.js, no DOM/canvas dependencies)
+async function extractTextWithPdf2json(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    // Dynamic import for ESM compatibility
+    import('pdf2json').then((pdf2jsonModule) => {
+      const PDFParser = pdf2jsonModule.default;
+      const pdfParser = new PDFParser();
+
+      pdfParser.on('pdfParser_dataError', (errData: { parserError: Error }) => {
+        console.error('pdf2json error:', errData.parserError);
+        reject(errData.parserError);
+      });
+
+      pdfParser.on('pdfParser_dataReady', (pdfData: { Pages: Array<{ Texts: Array<{ R: Array<{ T: string }> }> }> }) => {
+        try {
+          const textParts: string[] = [];
+
+          // Iterate through pages and extract text
+          for (const page of pdfData.Pages) {
+            for (const textItem of page.Texts) {
+              for (const run of textItem.R) {
+                // Safely decode URI-encoded text
+                let decodedText: string;
+                try {
+                  decodedText = decodeURIComponent(run.T);
+                } catch {
+                  // If URI decoding fails, use raw text or replace %XX patterns
+                  decodedText = run.T.replace(/%([0-9A-Fa-f]{2})/g, (_, hex) => {
+                    try {
+                      return String.fromCharCode(parseInt(hex, 16));
+                    } catch {
+                      return '';
+                    }
+                  });
+                }
+                if (decodedText && decodedText.trim()) {
+                  textParts.push(decodedText);
+                }
+              }
+            }
+            // Add page break
+            textParts.push('\n');
+          }
+
+          const fullText = textParts.join(' ').replace(/\s+/g, ' ').trim();
+          console.log(`pdf2json extracted ${fullText.length} characters from ${pdfData.Pages.length} pages`);
+          resolve(fullText);
+        } catch (err) {
+          reject(err);
+        }
+      });
+
+      // Parse the buffer
+      pdfParser.parseBuffer(buffer);
+    }).catch(reject);
+  });
+}
+
+// Fallback text extraction using regex patterns on PDF binary
+function extractTextFallback(buffer: Buffer): string {
+  const text = buffer.toString('latin1');
+
+  // Extract text from PDF stream objects
+  const textParts: string[] = [];
+
+  // Pattern 1: Text in parentheses (common PDF text encoding)
+  const parenMatches = text.match(/\(([^)]{2,})\)/g) || [];
+  for (const match of parenMatches) {
+    const content = match.slice(1, -1);
+    // Filter out binary/control characters
+    if (/^[\x20-\x7E\s]+$/.test(content) && content.length > 2) {
+      textParts.push(content);
+    }
+  }
+
+  // Pattern 2: Text in angle brackets (hex encoded)
+  const hexMatches = text.match(/<([0-9A-Fa-f\s]+)>/g) || [];
+  for (const match of hexMatches) {
+    const hex = match.slice(1, -1).replace(/\s/g, '');
+    if (hex.length % 2 === 0 && hex.length > 4) {
+      let decoded = '';
+      for (let i = 0; i < hex.length; i += 2) {
+        const charCode = parseInt(hex.substr(i, 2), 16);
+        if (charCode >= 32 && charCode <= 126) {
+          decoded += String.fromCharCode(charCode);
+        }
+      }
+      if (decoded.length > 2) {
+        textParts.push(decoded);
+      }
+    }
+  }
+
+  // Join and clean up
+  let result = textParts.join(' ');
+  result = result.replace(/\s+/g, ' ').trim();
+
+  return result;
 }
