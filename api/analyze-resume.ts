@@ -189,8 +189,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       extractedText = await extractTextWithPdf2json(pdfBuffer);
       console.log(`PDF parsed. Text length: ${extractedText.length}`);
-    } catch (parseError) {
-      console.error('PDF parsing failed:', parseError);
+    } catch (pdfErr) {
+      console.error('PDF parsing failed:', pdfErr);
 
       // Fallback: try basic text extraction from PDF binary
       console.log('Trying fallback text extraction...');
@@ -330,7 +330,7 @@ Respond ONLY with valid JSON in this exact format:
     analysis.ats_score = Math.max(0, Math.min(100, analysis.ats_score));
 
     return analysis;
-  } catch (parseError) {
+  } catch {
     console.error('Error parsing OpenAI response:', content);
     throw new Error('Analysis results could not be processed. Please try again.');
   }

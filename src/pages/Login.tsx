@@ -30,8 +30,9 @@ export default function Login() {
       setError(null);
       await signIn(data.email, data.password);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in. Please check your credentials.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to sign in. Please check your credentials.';
+      setError(message);
     } finally {
       setLoading(false);
     }

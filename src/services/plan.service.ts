@@ -92,7 +92,7 @@ export async function updateMilestone(
 
   const { data, error } = await supabase
     .from('weekly_milestones')
-    // @ts-ignore - Supabase typing issue
+    // @ts-expect-error - Supabase typing issue
     .update(updates)
     .eq('id', milestoneId)
     .select()
@@ -107,10 +107,10 @@ export async function reorderMilestones(
 ): Promise<void> {
   // Use atomic RPC function to update all milestones in a single transaction
   // This prevents race conditions from Promise.all with multiple updates
-  // @ts-ignore - RPC function defined in migration, not yet in generated types
-  const { error } = await supabase.rpc('reorder_milestones', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.rpc as any)('reorder_milestones', {
     milestone_updates: milestones,
-  } as any);
+  });
 
   if (error) {
     // Fallback to Promise.all if RPC not available (e.g., migration not run)
@@ -119,7 +119,7 @@ export async function reorderMilestones(
       const promises = milestones.map(({ id, order_index }) =>
         supabase
           .from('weekly_milestones')
-          // @ts-ignore - Supabase typing issue
+          // @ts-expect-error - Supabase typing issue
           .update({ order_index })
           .eq('id', id)
       );

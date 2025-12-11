@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { uploadResume, analyzeResume, getAnalysisHistory, checkUsageLimit } from '../services/resume.service';
 import ResumeUpload from '../components/resume/ResumeUpload';
@@ -26,13 +26,7 @@ export default function Resume() {
   const [remainingAnalyses, setRemainingAnalyses] = useState(2);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -58,7 +52,13 @@ export default function Resume() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user, loadData]);
 
   const handleUpload = async (file: File) => {
     if (!user) return;
@@ -88,15 +88,16 @@ export default function Resume() {
       } else {
         throw new Error('Analysis failed');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error uploading/analyzing resume:', error);
 
       // Handle specific error messages
       let errorMessage = 'Failed to analyze resume. Please try again.';
-      if (error.message?.includes('Rate limit')) {
+      const errMsg = error instanceof Error ? error.message : '';
+      if (errMsg.includes('Rate limit')) {
         errorMessage = 'You have exceeded your monthly analysis limit.';
-      } else if (error.message?.includes('PDF')) {
-        errorMessage = error.message;
+      } else if (errMsg.includes('PDF')) {
+        errorMessage = errMsg;
       }
 
       setToast({

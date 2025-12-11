@@ -8,7 +8,7 @@ interface StatusFilterProps {
   onStatusChange: (statuses: CompanyStatus[]) => void;
 }
 
-const STATUS_OPTIONS: Array<{ value: CompanyStatus; label: string; color: string }> = [
+export const STATUS_OPTIONS: Array<{ value: CompanyStatus; label: string; color: string }> = [
   { value: 'researching', label: 'Researching', color: 'bg-gray-100 text-gray-800' },
   { value: 'applied', label: 'Applied', color: 'bg-blue-100 text-blue-800' },
   { value: 'interviewing', label: 'Interviewing', color: 'bg-yellow-100 text-yellow-800' },
@@ -124,5 +124,3 @@ export default function StatusFilter({ selectedStatuses, onStatusChange }: Statu
     </div>
   );
 }
-
-export { STATUS_OPTIONS };

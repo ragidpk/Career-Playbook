@@ -32,8 +32,9 @@ export default function Signup() {
       setError(null);
       await signUp(data.email, data.password, data.fullName);
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account. Please try again.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create account. Please try again.';
+      setError(message);
     } finally {
       setLoading(false);
     }

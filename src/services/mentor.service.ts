@@ -82,7 +82,7 @@ export async function acceptInvitation(invitationId: string) {
 export async function declineInvitation(invitationId: string) {
   const { error } = await supabase
     .from('mentor_invitations')
-    // @ts-ignore - Supabase types need regeneration
+    // @ts-expect-error - Supabase types need regeneration
     .update({ status: 'declined' })
     .eq('id', invitationId);
 

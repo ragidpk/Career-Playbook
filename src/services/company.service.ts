@@ -19,7 +19,7 @@ export async function getCompanies(userId: string): Promise<Company[]> {
 export async function createCompany(userId: string, company: Omit<CreateCompanyInput, 'user_id'>): Promise<Company> {
   const { data, error } = await supabase
     .from('companies')
-    // @ts-ignore - Supabase typing issue
+    // @ts-expect-error - Supabase typing issue
     .insert({ user_id: userId, ...company })
     .select()
     .single();
@@ -31,7 +31,7 @@ export async function createCompany(userId: string, company: Omit<CreateCompanyI
 export async function updateCompany(companyId: string, updates: Partial<Company>): Promise<Company> {
   const { data, error } = await supabase
     .from('companies')
-    // @ts-ignore - Supabase typing issue
+    // @ts-expect-error - Supabase typing issue
     .update(updates)
     .eq('id', companyId)
     .select()

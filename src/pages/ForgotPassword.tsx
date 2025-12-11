@@ -27,7 +27,7 @@ export default function ForgotPassword() {
       setLoading(true);
       await resetPassword(data.email);
       setSuccess(true);
-    } catch (err: any) {
+    } catch {
       // Even on error, show success to prevent email enumeration
       setSuccess(true);
     } finally {

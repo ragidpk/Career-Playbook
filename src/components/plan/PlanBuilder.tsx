@@ -16,6 +16,7 @@ export default function PlanBuilder({ planId }: PlanBuilderProps) {
   const { plan, milestones, updateMilestone, updateOrder, isLoading, isReordering } = usePlan(planId);
   const [localMilestones, setLocalMilestones] = useState<WeeklyMilestone[]>([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [milestonesKey, setMilestonesKey] = useState(0);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -28,12 +29,15 @@ export default function PlanBuilder({ planId }: PlanBuilderProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Sync local state with fetched milestones
-  useEffect(() => {
-    if (milestones.length > 0) {
-      setLocalMilestones(milestones);
-    }
-  }, [milestones]);
+  // Sync local state with fetched milestones using key-based reset
+  // This avoids the setState-in-effect pattern
+  const milestonesId = milestones.map(m => m.id).join(',');
+  if (milestones.length > 0 && localMilestones.length === 0) {
+    setLocalMilestones(milestones);
+  } else if (milestonesId && milestonesKey === 0 && milestones.length > 0) {
+    setLocalMilestones(milestones);
+    setMilestonesKey(1);
+  }
 
   // Configure drag sensor for better UX
   const sensors = useSensors(

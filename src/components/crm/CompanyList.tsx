@@ -3,6 +3,46 @@ import { STATUS_OPTIONS } from './StatusFilter';
 import CompanyCard from './CompanyCard';
 import type { Company } from '../../services/company.service';
 
+// SortButton moved outside component to prevent re-creation on each render
+function SortButton({
+  field,
+  children,
+  sortBy,
+  sortOrder,
+  onSort,
+}: {
+  field: 'name' | 'date_added';
+  children: React.ReactNode;
+  sortBy: 'name' | 'date_added';
+  sortOrder: 'asc' | 'desc';
+  onSort: (field: 'name' | 'date_added') => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(field)}
+      className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+    >
+      {children}
+      <svg
+        className={`w-4 h-4 transition-transform ${
+          sortBy === field && sortOrder === 'desc' ? 'rotate-180' : ''
+        } ${sortBy === field ? 'text-primary-500' : 'text-gray-400'}`}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M5 15l7-7 7 7"
+        />
+      </svg>
+    </button>
+  );
+}
+
 interface CompanyListProps {
   companies: Company[];
   onEdit: (company: Company) => void;
@@ -52,31 +92,6 @@ export default function CompanyList({
     );
   };
 
-  const SortButton = ({ field, children }: { field: 'name' | 'date_added'; children: React.ReactNode }) => (
-    <button
-      type="button"
-      onClick={() => onSort(field)}
-      className="flex items-center gap-1 hover:text-gray-900 transition-colors"
-    >
-      {children}
-      <svg
-        className={`w-4 h-4 transition-transform ${
-          sortBy === field && sortOrder === 'desc' ? 'rotate-180' : ''
-        } ${sortBy === field ? 'text-primary-500' : 'text-gray-400'}`}
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M5 15l7-7 7 7"
-        />
-      </svg>
-    </button>
-  );
-
   if (companies.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
@@ -110,7 +125,7 @@ export default function CompanyList({
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                <SortButton field="name">Company Name</SortButton>
+                <SortButton field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>Company Name</SortButton>
               </th>
               <th
                 scope="col"
@@ -128,7 +143,7 @@ export default function CompanyList({
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                <SortButton field="date_added">Date Added</SortButton>
+                <SortButton field="date_added" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>Date Added</SortButton>
               </th>
               <th
                 scope="col"
