@@ -105,21 +105,33 @@ export async function updateMilestone(
 export async function reorderMilestones(
   milestones: { id: string; order_index: number }[]
 ): Promise<void> {
-  // Batch update order_index for all milestones after drag-drop
-  const promises = milestones.map(({ id, order_index }) =>
-    supabase
-      .from('weekly_milestones')
-      // @ts-ignore - Supabase typing issue
-      .update({ order_index })
-      .eq('id', id)
-  );
+  // Use atomic RPC function to update all milestones in a single transaction
+  // This prevents race conditions from Promise.all with multiple updates
+  // @ts-ignore - RPC function defined in migration, not yet in generated types
+  const { error } = await supabase.rpc('reorder_milestones', {
+    milestone_updates: milestones,
+  } as any);
 
-  const results = await Promise.all(promises);
+  if (error) {
+    // Fallback to Promise.all if RPC not available (e.g., migration not run)
+    if (error.code === 'PGRST202' || error.message.includes('not found')) {
+      console.warn('reorder_milestones RPC not found, using fallback');
+      const promises = milestones.map(({ id, order_index }) =>
+        supabase
+          .from('weekly_milestones')
+          // @ts-ignore - Supabase typing issue
+          .update({ order_index })
+          .eq('id', id)
+      );
 
-  // Check for any errors
-  const errors = results.filter(r => r.error);
-  if (errors.length > 0) {
-    throw new Error(`Failed to reorder milestones: ${errors[0].error?.message}`);
+      const results = await Promise.all(promises);
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) {
+        throw new Error(`Failed to reorder milestones: ${errors[0].error?.message}`);
+      }
+      return;
+    }
+    throw new Error(`Failed to reorder milestones: ${error.message}`);
   }
 }
 
