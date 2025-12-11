@@ -12,6 +12,7 @@ interface Analysis {
   strengths: string[];
   gaps: string[];
   recommendations: string[];
+  candidate_name?: string;
   target_country?: string;
 }
 
@@ -139,19 +140,24 @@ export default function AnalysisHistory({ analyses, onSelectAnalysis, onDeleteAn
 
                   {/* File Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-2 mb-1">
-                      <FileText className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {analysis.file_name}
-                      </p>
-                    </div>
+                    {/* Show candidate name as title if available */}
+                    <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                      {analysis.candidate_name || analysis.file_name}
+                    </p>
+                    {/* Show file name below if we have candidate name */}
+                    {analysis.candidate_name && (
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                        <FileText className="h-3 w-3" />
+                        <span className="truncate">{analysis.file_name}</span>
+                      </div>
+                    )}
                     {analysis.target_country && (
-                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-1 ml-6">
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
                         <Globe className="h-3 w-3" />
                         <span>{analysis.target_country}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 text-xs text-gray-500 ml-6">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Calendar className="h-3 w-3" />
                       <span>{formatDate(analysis.analysis_date)}</span>
                     </div>
