@@ -27,6 +27,7 @@ interface AnalysisResultsProps {
     strengths: string[];
     gaps: string[];
     recommendations: string[];
+    file_name?: string;
     candidate_name?: string;
     target_country?: string;
     summary?: string;
@@ -48,10 +49,27 @@ const EXPERIENCE_COLORS: Record<string, { bg: string; text: string }> = {
   'Executive': { bg: 'bg-amber-100', text: 'text-amber-800' },
 };
 
+// Extract a readable name from file name (e.g., "Praveen_Koolyst_Resume.pdf" -> "Praveen Koolyst")
+const extractNameFromFileName = (fileName: string): string => {
+  // Remove extension
+  const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+  // Remove common suffixes like _Resume, _CV, _2024, etc. and timestamps
+  const cleanedName = nameWithoutExt
+    .replace(/^\d+_/, '') // Remove leading timestamp like "1733912345_"
+    .replace(/[_-]?(resume|cv|2024|2025|v\d+|sep|oct|nov|dec|jan|feb|mar|apr|may|jun|jul|aug)$/gi, '')
+    .replace(/[_-]/g, ' ')
+    .trim();
+  return cleanedName || fileName;
+};
+
 export default function AnalysisResults({ analysis, remainingAnalyses }: AnalysisResultsProps) {
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(
     new Set(['strengths', 'improvements', 'recommendations'])
   );
+
+  // Get display name: prefer candidate_name, fallback to extracted file name
+  const displayName = analysis.candidate_name ||
+    (analysis.file_name ? extractNameFromFileName(analysis.file_name) : null);
 
   const toggleSection = (section: SectionKey) => {
     setExpandedSections(prev => {
@@ -87,7 +105,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
           {/* Candidate Name Header */}
           <div className="mb-4 pb-4 border-b border-gray-100">
             <h2 className="text-xl font-bold text-gray-900">
-              Resume Analysis{analysis.candidate_name ? ` for ${analysis.candidate_name}` : ''}
+              Resume Analysis{displayName ? ` for ${displayName}` : ''}
             </h2>
           </div>
 
