@@ -238,9 +238,16 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <main>
+        <main className="pb-16">
           <Outlet />
         </main>
+
+        {/* Footer */}
+        <footer className="fixed bottom-0 left-0 right-0 lg:left-64 bg-white border-t border-gray-100 py-3 px-4">
+          <p className="text-xs text-gray-500 text-center">
+            © 2025 Ragid Kader. Creator of Smart Career Planner | Beyond Your Career. All rights reserved.
+          </p>
+        </footer>
       </div>
     </div>
   );

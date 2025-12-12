@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Briefcase, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { signupSchema } from '../utils/validation';
 import { signUp } from '../services/auth.service';
 import Button from '../components/shared/Button';
@@ -79,17 +79,47 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-3xl shadow-elevated p-8">
+    <div className="min-h-screen flex bg-white">
+      {/* Left Side - Image */}
+      <div className="hidden lg:block lg:flex-1 relative">
+        <img
+          src="/images/signup-img.webp"
+          alt="Start your career journey"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-primary-900/40 to-primary-600/20" />
+
+        {/* Text overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-12">
+          <blockquote className="text-white">
+            <p className="text-2xl font-display font-semibold leading-relaxed mb-4">
+              "The best investment you can make is in yourself and your career."
+            </p>
+            <footer className="text-white/80">
+              <span className="font-medium">Join 5,000+</span>
+              <span className="mx-2">•</span>
+              <span>Professionals growing their careers</span>
+            </footer>
+          </blockquote>
+        </div>
+      </div>
+
+      {/* Right Side - Signup Form */}
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-md w-full">
           {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="w-14 h-14 bg-primary-500 rounded-2xl flex items-center justify-center shadow-button">
-              <Briefcase className="w-7 h-7 text-white" />
-            </div>
+          <div className="mb-8">
+            <Link to="/">
+              <img
+                src="/images/logo.svg"
+                alt="Career Playbook"
+                className="h-10"
+              />
+            </Link>
           </div>
 
-          <div className="text-center mb-8">
+          <div className="mb-8">
             <h2 className="font-display text-3xl font-bold text-gray-900">
               Create your account
             </h2>
@@ -151,7 +181,7 @@ export default function Signup() {
             </Button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-gray-500">
+          <p className="mt-8 text-sm text-gray-500">
             Already have an account?{' '}
             <Link
               to="/login"
@@ -161,6 +191,13 @@ export default function Signup() {
             </Link>
           </p>
         </div>
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-0 left-0 right-0 lg:left-1/2 py-4 px-4">
+        <p className="text-xs text-gray-400 text-center">
+          © 2025 Ragid Kader. Creator of Smart Career Planner | Beyond Your Career. All rights reserved.
+        </p>
       </div>
     </div>
   );

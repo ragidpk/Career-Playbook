@@ -150,6 +150,13 @@ export default function Login() {
           </blockquote>
         </div>
       </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-0 left-0 right-0 lg:right-1/2 py-4 px-4">
+        <p className="text-xs text-gray-400 text-center">
+          © 2025 Ragid Kader. Creator of Smart Career Planner | Beyond Your Career. All rights reserved.
+        </p>
+      </div>
     </div>
   );
 }
