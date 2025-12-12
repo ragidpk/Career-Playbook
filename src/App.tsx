@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from './components/shared/Toast';
 import LandingPage from './pages/LandingPage';
+import About from './pages/About';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AuthCallback from './pages/AuthCallback';
@@ -80,8 +81,9 @@ function App() {
               </Route>
             </Route>
 
-            {/* Landing page */}
+            {/* Public pages */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/about" element={<About />} />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>

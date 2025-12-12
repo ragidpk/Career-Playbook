@@ -91,17 +91,21 @@ export default function LandingPage() {
 
             {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-8">
-              {['About', 'Features', 'Resources', 'Pricing', 'Contact'].map(
-                (item) => (
-                  <a
-                    key={item}
-                    href={`#${item.toLowerCase()}`}
-                    className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-smooth"
-                  >
-                    {item}
-                  </a>
-                )
-              )}
+              <Link
+                to="/about"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-smooth"
+              >
+                About
+              </Link>
+              {['Features', 'Resources', 'Pricing', 'Contact'].map((item) => (
+                <a
+                  key={item}
+                  href={`#${item.toLowerCase()}`}
+                  className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  {item}
+                </a>
+              ))}
             </nav>
 
             {/* CTA Buttons */}
