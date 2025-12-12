@@ -103,7 +103,13 @@ export default function LandingPage() {
               >
                 Features
               </Link>
-              {['Resources', 'Pricing', 'Contact'].map((item) => (
+              <Link
+                to="/resources"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-smooth"
+              >
+                Resources
+              </Link>
+              {['Pricing', 'Contact'].map((item) => (
                 <a
                   key={item}
                   href={`#${item.toLowerCase()}`}
