@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   CheckCircle,
   AlertTriangle,
@@ -9,10 +9,14 @@ import {
   User,
   Globe,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Download,
+  Printer,
+  Loader2
 } from 'lucide-react';
 import Card from '../shared/Card';
 import ATSScore from './ATSScore';
+import PrintableReport from './PrintableReport';
 
 interface NinetyDayStrategy {
   overview: string;
@@ -51,25 +55,136 @@ const EXPERIENCE_COLORS: Record<string, { bg: string; text: string }> = {
 
 // Extract a readable name from file name (e.g., "Praveen_Koolyst_Resume.pdf" -> "Praveen Koolyst")
 const extractNameFromFileName = (fileName: string): string => {
-  // Remove extension
   const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
-  // Remove common suffixes like _Resume, _CV, _2024, etc. and timestamps
   const cleanedName = nameWithoutExt
-    .replace(/^\d+_/, '') // Remove leading timestamp like "1733912345_"
+    .replace(/^\d+_/, '')
     .replace(/[_-]?(resume|cv|2024|2025|v\d+|sep|oct|nov|dec|jan|feb|mar|apr|may|jun|jul|aug)$/gi, '')
     .replace(/[_-]/g, ' ')
     .trim();
   return cleanedName || fileName;
 };
 
+// Sanitize filename to remove invalid characters
+const sanitizeFileName = (name: string): string => {
+  return name
+    .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename chars
+    .replace(/\s+/g, '_')          // Replace spaces with underscores
+    .replace(/_+/g, '_')           // Collapse multiple underscores
+    .replace(/^_|_$/g, '')         // Trim leading/trailing underscores
+    .substring(0, 100);            // Limit length
+};
+
 export default function AnalysisResults({ analysis, remainingAnalyses }: AnalysisResultsProps) {
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(
     new Set(['strengths', 'improvements', 'recommendations'])
   );
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
 
   // Get display name: prefer candidate_name, fallback to extracted file name
   const displayName = analysis.candidate_name ||
     (analysis.file_name ? extractNameFromFileName(analysis.file_name) : null);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  const handleDownloadPDF = async () => {
+    // Guard for SSR/non-browser context
+    if (typeof window === 'undefined') return;
+    if (!printRef.current) {
+      showToast('Unable to generate PDF. Please try again.', 'error');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+
+    try {
+      // Dynamic import to reduce bundle size
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ]);
+
+      // Wait for fonts to load
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+
+      const element = printRef.current;
+
+      // A4 dimensions in pixels at 96 DPI: 794 x 1123
+      // Using scale 2 for better quality
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
+
+      // A4 size in mm: 210 x 297
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfWidth = 210;  // A4 width in mm
+      const pdfHeight = 297; // A4 height in mm
+
+      // Calculate image dimensions to fit A4
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      // Scale to fit width exactly, let height flow
+      const scale = pdfWidth / (imgWidth / 2); // Divide by 2 because of scale: 2
+      const scaledHeight = (imgHeight / 2) * scale;
+
+      // Calculate number of pages needed
+      const pageCount = Math.ceil(scaledHeight / pdfHeight);
+
+      for (let i = 0; i < pageCount; i++) {
+        if (i > 0) pdf.addPage();
+
+        // Position image to show correct portion on each page
+        const yOffset = -i * pdfHeight;
+
+        pdf.addImage(
+          imgData,
+          'PNG',
+          0,
+          yOffset,
+          pdfWidth,
+          scaledHeight
+        );
+      }
+
+      const safeName = displayName ? sanitizeFileName(displayName) : 'Report';
+      const fileName = `Resume_Analysis_${safeName}.pdf`;
+
+      pdf.save(fileName);
+      showToast('PDF downloaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      showToast('Failed to generate PDF. Please try again.', 'error');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const handlePrint = () => {
+    if (typeof window === 'undefined') return;
+    window.print();
+  };
 
   const toggleSection = (section: SectionKey) => {
     setExpandedSections(prev => {
@@ -88,7 +203,29 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
     : { bg: 'bg-gray-100', text: 'text-gray-800' };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:hidden">
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg transition-all ${
+            toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          }`}
+          role="alert"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-2">
+            <span>{toast.message}</span>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-2 font-bold hover:opacity-80"
+              aria-label="Dismiss notification"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Remaining Analyses Notice */}
       {remainingAnalyses !== undefined && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -103,10 +240,35 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
       <Card>
         <div className="p-6">
           {/* Candidate Name Header */}
-          <div className="mb-4 pb-4 border-b border-gray-100">
+          <div className="mb-4 pb-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h2 className="text-xl font-bold text-gray-900">
               Resume Analysis{displayName ? ` for ${displayName}` : ''}
             </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownloadPDF}
+                disabled={isGeneratingPDF}
+                aria-label={isGeneratingPDF ? 'Generating PDF, please wait' : 'Download resume analysis as PDF'}
+                aria-busy={isGeneratingPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              >
+                {isGeneratingPDF ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
+              </button>
+              <button
+                onClick={handlePrint}
+                disabled={isGeneratingPDF}
+                aria-label="Print resume analysis"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-start gap-6">
@@ -185,10 +347,11 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
         <button
           onClick={() => toggleSection('strengths')}
           className="w-full p-6 flex items-center justify-between text-left"
+          aria-expanded={expandedSections.has('strengths')}
         >
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-500" />
-            Key Strengths ({analysis.strengths.length})
+            Key Strengths ({analysis.strengths?.length || 0})
           </h3>
           {expandedSections.has('strengths') ? (
             <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -196,7 +359,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
             <ChevronDown className="h-5 w-5 text-gray-400" />
           )}
         </button>
-        {expandedSections.has('strengths') && (
+        {expandedSections.has('strengths') && analysis.strengths?.length > 0 && (
           <div className="px-6 pb-6 space-y-3">
             {analysis.strengths.map((strength, index) => (
               <div
@@ -216,10 +379,11 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
         <button
           onClick={() => toggleSection('improvements')}
           className="w-full p-6 flex items-center justify-between text-left"
+          aria-expanded={expandedSections.has('improvements')}
         >
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            Areas for Improvement ({analysis.gaps.length})
+            Areas for Improvement ({analysis.gaps?.length || 0})
           </h3>
           {expandedSections.has('improvements') ? (
             <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -227,7 +391,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
             <ChevronDown className="h-5 w-5 text-gray-400" />
           )}
         </button>
-        {expandedSections.has('improvements') && (
+        {expandedSections.has('improvements') && analysis.gaps?.length > 0 && (
           <div className="px-6 pb-6 space-y-3">
             {analysis.gaps.map((gap, index) => (
               <div
@@ -247,10 +411,11 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
         <button
           onClick={() => toggleSection('recommendations')}
           className="w-full p-6 flex items-center justify-between text-left"
+          aria-expanded={expandedSections.has('recommendations')}
         >
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-blue-500" />
-            Recommendations ({analysis.recommendations.length})
+            Recommendations ({analysis.recommendations?.length || 0})
           </h3>
           {expandedSections.has('recommendations') ? (
             <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -258,7 +423,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
             <ChevronDown className="h-5 w-5 text-gray-400" />
           )}
         </button>
-        {expandedSections.has('recommendations') && (
+        {expandedSections.has('recommendations') && analysis.recommendations?.length > 0 && (
           <div className="px-6 pb-6 space-y-3">
             {analysis.recommendations.map((rec, index) => (
               <div
@@ -281,6 +446,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
           <button
             onClick={() => toggleSection('roles')}
             className="w-full p-6 flex items-center justify-between text-left"
+            aria-expanded={expandedSections.has('roles')}
           >
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Briefcase className="h-5 w-5 text-purple-500" />
@@ -316,6 +482,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
           <button
             onClick={() => toggleSection('strategy')}
             className="w-full p-6 flex items-center justify-between text-left"
+            aria-expanded={expandedSections.has('strategy')}
           >
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Target className="h-5 w-5 text-indigo-500" />
@@ -355,6 +522,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
           <button
             onClick={() => toggleSection('plan')}
             className="w-full p-6 flex items-center justify-between text-left"
+            aria-expanded={expandedSections.has('plan')}
           >
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Calendar className="h-5 w-5 text-teal-500" />
@@ -436,6 +604,72 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
           )}
         </Card>
       )}
+
+      {/* Hidden Printable Report for PDF Generation - always rendered for ref access */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          width: '210mm',
+          pointerEvents: 'none',
+        }}
+      >
+        <PrintableReport
+          ref={printRef}
+          analysis={analysis}
+          displayName={displayName || 'Candidate'}
+        />
+      </div>
+
+      {/* Print Styles - Enhanced for proper printing */}
+      <style>{`
+        @media print {
+          /* Hide everything except printable content */
+          body > *:not(.print-only) {
+            display: none !important;
+          }
+
+          /* Hide app chrome */
+          nav, header, footer, aside,
+          .sidebar, .navigation, .toast,
+          button, .no-print {
+            display: none !important;
+          }
+
+          /* Show only print content */
+          .print-only {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+
+          /* Page setup */
+          @page {
+            size: A4 portrait;
+            margin: 15mm 20mm;
+          }
+
+          /* Ensure good page breaks */
+          h1, h2, h3, h4 {
+            page-break-after: avoid;
+          }
+
+          ul, ol, table {
+            page-break-inside: avoid;
+          }
+
+          /* Ensure colors print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

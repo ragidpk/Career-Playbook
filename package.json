@@ -21,6 +21,8 @@
     "@vercel/node": "^5.5.15",
     "autoprefixer": "^10.4.22",
     "date-fns": "^4.1.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4",
     "lucide-react": "^0.556.0",
     "openai": "^6.10.0",
     "pdf-parse": "^2.4.5",
