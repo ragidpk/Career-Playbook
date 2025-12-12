@@ -6,24 +6,29 @@ import {
   Sparkles,
   Calendar,
   FileText,
-  Heart,
-  Check,
+  HandHeart,
+  Briefcase,
   Instagram,
   Facebook,
   Twitter,
   Linkedin,
-  Play,
+  Check,
+  Zap,
+  BarChart3,
+  Brain,
+  Building2,
+  MessageSquare,
+  ClipboardCheck,
 } from 'lucide-react';
-import HeroCarousel from '../components/landing/HeroCarousel';
 
-const features = [
+const mainFeatures = [
   {
     icon: Target,
     title: 'Career Planning',
     description:
-      'Create comprehensive career roadmaps with AI-generated milestones tailored to your goals.',
+      'Create comprehensive 52-week career roadmaps with AI-generated milestones tailored to your goals.',
     color: 'bg-primary-500',
-    items: ['Custom career plans', 'Weekly milestones', 'Progress tracking'],
+    items: ['Custom career plans', 'Weekly milestones', 'Progress tracking', 'Goal optimization'],
   },
   {
     icon: Users,
@@ -31,7 +36,7 @@ const features = [
     description:
       'Connect with experienced professionals who can guide you through your career journey.',
     color: 'bg-teal-500',
-    items: ['Browse mentors', 'Book sessions', '1-on-1 guidance'],
+    items: ['Browse mentors', 'Book sessions', '1-on-1 guidance', 'Industry insights'],
   },
   {
     icon: Sparkles,
@@ -39,7 +44,7 @@ const features = [
     description:
       'Leverage AI to generate personalized milestones and get smart recommendations.',
     color: 'bg-amber-500',
-    items: ['Smart milestones', 'Personalized advice', 'Goal optimization'],
+    items: ['Smart milestones', 'Personalized advice', 'Goal optimization', 'Career insights'],
   },
   {
     icon: Calendar,
@@ -47,33 +52,87 @@ const features = [
     description:
       'Easily schedule and manage mentorship sessions that fit your calendar.',
     color: 'bg-pink-500',
-    items: ['Calendar integration', 'Automated reminders', 'Session tracking'],
+    items: ['Calendar integration', 'Automated reminders', 'Session tracking', 'Easy rescheduling'],
   },
   {
     icon: FileText,
     title: 'Career Templates',
     description:
       'Start fast with proven career path templates for various professions.',
-    color: 'bg-yellow-500',
-    items: ['Pre-built paths', 'Industry best practices', 'Customizable'],
+    color: 'bg-indigo-500',
+    items: ['Pre-built paths', 'Industry best practices', 'Customizable', 'Proven frameworks'],
   },
   {
-    icon: Heart,
+    icon: HandHeart,
     title: 'Accountability Partners',
     description:
       'Collaborate with partners who keep you on track and motivated.',
     color: 'bg-orange-500',
-    items: ['Progress sharing', 'Regular check-ins', 'Mutual support'],
+    items: ['Progress sharing', 'Regular check-ins', 'Mutual support', 'Goal tracking'],
+  },
+];
+
+const additionalFeatures = [
+  {
+    icon: Brain,
+    title: 'Career Canvas',
+    description: '9-section self-assessment framework to visualize every aspect of your professional development.',
+  },
+  {
+    icon: ClipboardCheck,
+    title: '90-Day Plan Builder',
+    description: 'Break down your goals into 12-week actionable milestones with drag-and-drop organization.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Resume Analysis',
+    description: 'AI-powered resume review with actionable feedback to improve your job applications.',
+  },
+  {
+    icon: Briefcase,
+    title: 'Job Board',
+    description: 'Curated job listings matched to your skills, experience, and career goals.',
+  },
+  {
+    icon: Building2,
+    title: 'Job Hunt CRM',
+    description: 'Track applications, manage company contacts, and monitor your job search pipeline.',
+  },
+  {
+    icon: MessageSquare,
+    title: 'Interview Prep',
+    description: 'Practice common questions, get AI feedback, and build confidence for your interviews.',
+  },
+];
+
+const steps = [
+  {
+    number: '1',
+    title: 'Create Your Plan',
+    description: 'Start with a template or build a custom career roadmap tailored to your unique goals and aspirations.',
+    color: 'bg-primary-500',
+  },
+  {
+    number: '2',
+    title: 'Connect & Learn',
+    description: 'Find mentors, book sessions, and get personalized guidance from experienced professionals in your field.',
+    color: 'bg-teal-500',
+  },
+  {
+    number: '3',
+    title: 'Track & Achieve',
+    description: 'Monitor your progress, complete milestones, and celebrate achievements as you advance toward your goals.',
+    color: 'bg-amber-500',
   },
 ];
 
 const footerLinks = {
   Product: ['Features', 'Pricing', 'Templates', 'Resources'],
-  Company: ['About', 'Books', 'Contact'],
+  Company: ['About', 'Contact'],
   Support: ['Privacy Policy', 'Terms & Conditions', 'Contact Us'],
 };
 
-export default function LandingPage() {
+export default function Features() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -99,14 +158,14 @@ export default function LandingPage() {
               </Link>
               <Link
                 to="/features"
-                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-smooth"
+                className="text-sm font-medium text-primary-600 transition-smooth"
               >
                 Features
               </Link>
               {['Resources', 'Pricing', 'Contact'].map((item) => (
                 <a
                   key={item}
-                  href={`#${item.toLowerCase()}`}
+                  href={`/#${item.toLowerCase()}`}
                   className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-smooth"
                 >
                   {item}
@@ -136,151 +195,52 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-teal-50" />
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary-100/50 to-transparent" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Left Content */}
-            <div className="max-w-xl">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 border border-primary-100 rounded-pill mb-6">
-                <Sparkles className="w-4 h-4 text-primary-500" />
-                <span className="text-sm font-medium text-primary-600">
-                  AI-Powered Career Development
-                </span>
-              </div>
-
-              {/* Headline */}
-              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
-                Plan Your Career.{' '}
-                <span className="text-primary-500">Achieve Your Goals.</span>
-              </h1>
-
-              {/* Subheadline */}
-              <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-                Build personalized career roadmaps, connect with mentors, and
-                track your progress with AI-powered guidance every step of the
-                way.
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-wrap gap-4">
-                <Link
-                  to="/signup"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-primary-500 text-white font-semibold rounded-pill shadow-button hover:bg-primary-600 hover:shadow-button-hover transition-smooth"
-                >
-                  Get Started Free
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-gray-700 font-semibold rounded-pill border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-smooth"
-                >
-                  <Play className="w-5 h-5" />
-                  Watch Demo
-                </button>
-              </div>
-
-              {/* Trust indicators */}
-              <div className="mt-12 pt-8 border-t border-gray-200">
-                <p className="text-sm text-gray-500 mb-4">
-                  Trusted by professionals at
-                </p>
-                <div className="flex flex-wrap items-center gap-6 lg:gap-8">
-                  <span className="font-display font-bold text-lg text-gray-400 hover:text-gray-600 transition-smooth">
-                    NYUAD
-                  </span>
-                  <span className="font-display font-bold text-lg text-gray-400 hover:text-gray-600 transition-smooth">
-                    Al Futtaim
-                  </span>
-                  <span className="font-display font-bold text-lg text-gray-400 hover:text-gray-600 transition-smooth">
-                    BUiD
-                  </span>
-                  <span className="font-display font-bold text-lg text-gray-400 hover:text-gray-600 transition-smooth">
-                    MAF
-                  </span>
-                </div>
-              </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+          <div className="max-w-3xl mx-auto text-center">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 border border-primary-100 rounded-pill mb-6">
+              <Zap className="w-4 h-4 text-primary-500" />
+              <span className="text-sm font-medium text-primary-600">
+                Powerful Features
+              </span>
             </div>
 
-            {/* Right - Hero Image Carousel */}
-            <div className="relative">
-              <HeroCarousel />
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
+              Everything You Need to{' '}
+              <span className="text-primary-500">Succeed</span>
+            </h1>
 
-              {/* Floating stats card */}
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-elevated p-5 hidden lg:block">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-success-50 rounded-xl flex items-center justify-center">
-                    <Target className="w-6 h-6 text-success-500" />
-                  </div>
-                  <div>
-                    <p className="font-display text-2xl font-bold text-gray-900">
-                      10K+
-                    </p>
-                    <p className="text-sm text-gray-500">Goals Achieved</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating users card */}
-              <div className="absolute -top-4 -right-4 bg-white rounded-2xl shadow-elevated p-5 hidden lg:block">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
-                    <Users className="w-6 h-6 text-primary-500" />
-                  </div>
-                  <div>
-                    <p className="font-display text-2xl font-bold text-gray-900">
-                      5K+
-                    </p>
-                    <p className="text-sm text-gray-500">Active Users</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <p className="text-xl text-gray-600 leading-relaxed">
+              Powerful features designed to help you plan, execute, and accelerate your career growth with AI-powered guidance and expert support.
+            </p>
           </div>
-        </div>
-
-        {/* Wave divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg
-            viewBox="0 0 1440 120"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-full"
-          >
-            <path
-              d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"
-              fill="white"
-            />
-          </svg>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 lg:py-28 bg-white">
+      {/* Main Features Grid */}
+      <section className="py-20 lg:py-28 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Section Header */}
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              Everything You Need to Succeed
+            <div className="section-label justify-center mb-4">Core Features</div>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              Tools That Drive Results
             </h2>
             <p className="text-lg text-gray-600">
-              Powerful tools to plan, execute, and accelerate your career growth
+              Everything you need to plan, execute, and achieve your career goals
             </p>
           </div>
 
-          {/* Feature Cards */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {features.map((feature) => (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {mainFeatures.map((feature) => (
               <div
                 key={feature.title}
-                className="group bg-white rounded-2xl border border-gray-100 p-6 lg:p-8 hover:shadow-card-hover hover:border-gray-200 transition-smooth"
+                className="bg-white rounded-2xl border border-gray-100 p-8 hover:shadow-card-hover hover:border-gray-200 transition-smooth"
               >
                 {/* Icon */}
                 <div
-                  className={`w-14 h-14 ${feature.color} rounded-2xl flex items-center justify-center mb-5 shadow-button`}
+                  className={`w-14 h-14 ${feature.color} rounded-2xl flex items-center justify-center mb-6 shadow-button`}
                 >
                   <feature.icon className="w-7 h-7 text-white" />
                 </div>
@@ -291,7 +251,7 @@ export default function LandingPage() {
                 </h3>
 
                 {/* Description */}
-                <p className="text-gray-600 mb-5 leading-relaxed">
+                <p className="text-gray-600 mb-6 leading-relaxed">
                   {feature.description}
                 </p>
 
@@ -312,21 +272,78 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-gray-50">
+      {/* Additional Features */}
+      <section className="py-20 lg:py-28 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { value: '10,000+', label: 'Career Goals Set' },
-              { value: '5,000+', label: 'Active Users' },
-              { value: '500+', label: 'Expert Mentors' },
-              { value: '95%', label: 'Success Rate' },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <p className="font-display text-3xl lg:text-4xl font-bold text-primary-500 mb-2">
-                  {stat.value}
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="section-label justify-center mb-4">More Features</div>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              Built for Career Success
+            </h2>
+            <p className="text-lg text-gray-600">
+              Additional tools to supercharge your career journey
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {additionalFeatures.map((feature) => (
+              <div
+                key={feature.title}
+                className="bg-white rounded-2xl p-6 shadow-card hover:shadow-card-hover transition-smooth"
+              >
+                <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center mb-4">
+                  <feature.icon className="w-6 h-6 text-primary-500" />
+                </div>
+                <h3 className="font-display text-lg font-semibold text-gray-900 mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {feature.description}
                 </p>
-                <p className="text-gray-600">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 lg:py-28 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="section-label justify-center mb-4">How It Works</div>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              Three Simple Steps
+            </h2>
+            <p className="text-lg text-gray-600">
+              Get started in minutes and begin your journey to career success
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+            {steps.map((step, index) => (
+              <div key={step.title} className="relative">
+                {/* Connector line */}
+                {index < steps.length - 1 && (
+                  <div className="hidden md:block absolute top-10 left-1/2 w-full h-0.5 bg-gray-200" />
+                )}
+
+                <div className="relative text-center">
+                  {/* Number */}
+                  <div
+                    className={`w-20 h-20 ${step.color} rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-elevated`}
+                  >
+                    <span className="font-display text-3xl font-bold text-white">
+                      {step.number}
+                    </span>
+                  </div>
+
+                  <h3 className="font-display text-xl font-semibold text-gray-900 mb-3">
+                    {step.title}
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -335,7 +352,6 @@ export default function LandingPage() {
 
       {/* CTA Section */}
       <section className="relative py-24 lg:py-32 overflow-hidden">
-        {/* Background Image */}
         <div className="absolute inset-0">
           <img
             src="/images/bottom-img1.webp"
@@ -347,17 +363,16 @@ export default function LandingPage() {
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
-            Join a Community of Growth
+            Ready to Accelerate Your Career?
           </h2>
           <p className="text-lg text-gray-300 mb-10 max-w-2xl mx-auto">
-            Connect with mentors, accountability partners, and fellow career
-            seekers on the same journey towards professional excellence.
+            Join thousands of professionals using Career Playbook to achieve their goals.
           </p>
           <Link
             to="/signup"
             className="inline-flex items-center gap-2 px-8 py-4 bg-white text-gray-900 font-semibold rounded-pill hover:bg-gray-100 transition-smooth"
           >
-            Join Our Community
+            Get Started Free
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
