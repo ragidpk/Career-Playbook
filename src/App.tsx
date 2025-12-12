@@ -11,9 +11,12 @@ import Canvas from './pages/Canvas';
 import Plan from './pages/Plan';
 import Resume from './pages/Resume';
 import CRM from './pages/CRM';
+import Jobs from './pages/Jobs';
+import Interviews from './pages/Interviews';
 import Mentors from './pages/Mentors';
 import MentorView from './pages/MentorView';
 import AcceptInvitation from './pages/AcceptInvitation';
+import Settings from './pages/Settings';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 
 const queryClient = new QueryClient({
@@ -45,9 +48,12 @@ function App() {
               <Route path="/plan" element={<Plan />} />
               <Route path="/resume" element={<Resume />} />
               <Route path="/crm" element={<CRM />} />
+              <Route path="/jobs" element={<Jobs />} />
+              <Route path="/interviews" element={<Interviews />} />
               <Route path="/mentors" element={<Mentors />} />
               <Route path="/mentor-view" element={<MentorView />} />
               <Route path="/accept-invitation" element={<AcceptInvitation />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
 
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

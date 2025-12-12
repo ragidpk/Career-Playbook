@@ -328,6 +328,194 @@ export interface Database {
           updated_at?: string
         }
       }
+      job_listings: {
+        Row: {
+          id: string
+          user_id: string
+          company_id: string | null
+          title: string
+          company_name: string
+          location: string | null
+          job_url: string | null
+          source: 'linkedin' | 'indeed' | 'glassdoor' | 'company_site' | 'referral' | 'other' | null
+          description: string | null
+          salary_range: string | null
+          job_type: 'full_time' | 'part_time' | 'contract' | 'internship' | 'remote' | null
+          application_status: 'saved' | 'applied' | 'interviewing' | 'offer' | 'rejected' | 'withdrawn'
+          applied_date: string | null
+          deadline: string | null
+          notes: string | null
+          is_favorite: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          company_id?: string | null
+          title: string
+          company_name: string
+          location?: string | null
+          job_url?: string | null
+          source?: 'linkedin' | 'indeed' | 'glassdoor' | 'company_site' | 'referral' | 'other' | null
+          description?: string | null
+          salary_range?: string | null
+          job_type?: 'full_time' | 'part_time' | 'contract' | 'internship' | 'remote' | null
+          application_status?: 'saved' | 'applied' | 'interviewing' | 'offer' | 'rejected' | 'withdrawn'
+          applied_date?: string | null
+          deadline?: string | null
+          notes?: string | null
+          is_favorite?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          company_id?: string | null
+          title?: string
+          company_name?: string
+          location?: string | null
+          job_url?: string | null
+          source?: 'linkedin' | 'indeed' | 'glassdoor' | 'company_site' | 'referral' | 'other' | null
+          description?: string | null
+          salary_range?: string | null
+          job_type?: 'full_time' | 'part_time' | 'contract' | 'internship' | 'remote' | null
+          application_status?: 'saved' | 'applied' | 'interviewing' | 'offer' | 'rejected' | 'withdrawn'
+          applied_date?: string | null
+          deadline?: string | null
+          notes?: string | null
+          is_favorite?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: 'interview_reminder' | 'follow_up' | 'milestone_due' | 'plan_reminder' | 'system'
+          title: string
+          message: string
+          link: string | null
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'interview_reminder' | 'follow_up' | 'milestone_due' | 'plan_reminder' | 'system'
+          title: string
+          message: string
+          link?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'interview_reminder' | 'follow_up' | 'milestone_due' | 'plan_reminder' | 'system'
+          title?: string
+          message?: string
+          link?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+      }
+      notification_preferences: {
+        Row: {
+          id: string
+          user_id: string
+          email_interview_reminder: boolean
+          email_follow_up_reminder: boolean
+          email_milestone_reminder: boolean
+          email_weekly_summary: boolean
+          in_app_enabled: boolean
+          reminder_days_before: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email_interview_reminder?: boolean
+          email_follow_up_reminder?: boolean
+          email_milestone_reminder?: boolean
+          email_weekly_summary?: boolean
+          in_app_enabled?: boolean
+          reminder_days_before?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email_interview_reminder?: boolean
+          email_follow_up_reminder?: boolean
+          email_milestone_reminder?: boolean
+          email_weekly_summary?: boolean
+          in_app_enabled?: boolean
+          reminder_days_before?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      interviews: {
+        Row: {
+          id: string
+          user_id: string
+          company_id: string | null
+          company_name: string
+          position: string
+          interview_type: 'phone_screen' | 'technical' | 'behavioral' | 'final' | 'offer' | 'other'
+          scheduled_at: string | null
+          status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled'
+          prep_notes: string | null
+          questions_asked: string[] | null
+          interviewer_names: string[] | null
+          feedback: string | null
+          follow_up_date: string | null
+          follow_up_notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          company_id?: string | null
+          company_name: string
+          position: string
+          interview_type: 'phone_screen' | 'technical' | 'behavioral' | 'final' | 'offer' | 'other'
+          scheduled_at?: string | null
+          status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled'
+          prep_notes?: string | null
+          questions_asked?: string[] | null
+          interviewer_names?: string[] | null
+          feedback?: string | null
+          follow_up_date?: string | null
+          follow_up_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          company_id?: string | null
+          company_name?: string
+          position?: string
+          interview_type?: 'phone_screen' | 'technical' | 'behavioral' | 'final' | 'offer' | 'other'
+          scheduled_at?: string | null
+          status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled'
+          prep_notes?: string | null
+          questions_asked?: string[] | null
+          interviewer_names?: string[] | null
+          feedback?: string | null
+          follow_up_date?: string | null
+          follow_up_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       // Add other table types as needed
     }
     Views: {
