@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from './components/shared/Toast';
@@ -18,7 +19,12 @@ import MentorView from './pages/MentorView';
 import AcceptInvitation from './pages/AcceptInvitation';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/shared/ProtectedRoute';
+import AdminRoute from './components/shared/AdminRoute';
 import Layout from './components/layout/Layout';
+import LoadingSpinner from './components/shared/LoadingSpinner';
+
+// Lazy load Admin page to reduce bundle size for non-admin users
+const Admin = lazy(() => import('./pages/Admin'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +62,20 @@ function App() {
                 <Route path="/mentor-view" element={<MentorView />} />
                 <Route path="/accept-invitation" element={<AcceptInvitation />} />
                 <Route path="/settings" element={<Settings />} />
+              </Route>
+
+              {/* Admin routes - requires admin role, lazy loaded */}
+              <Route element={<AdminRoute />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="/admin"
+                    element={
+                      <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoadingSpinner /></div>}>
+                        <Admin />
+                      </Suspense>
+                    }
+                  />
+                </Route>
               </Route>
             </Route>
 

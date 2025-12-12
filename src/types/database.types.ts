@@ -18,7 +18,8 @@ export interface Database {
           email: string
           full_name: string | null
           avatar_url: string | null
-          role: 'job_seeker' | 'mentor'
+          role: 'job_seeker' | 'mentor' | 'admin' | 'super_admin'
+          is_admin: boolean
           created_at: string
           updated_at: string
         }
@@ -27,7 +28,8 @@ export interface Database {
           email: string
           full_name?: string | null
           avatar_url?: string | null
-          role?: 'job_seeker' | 'mentor'
+          role?: 'job_seeker' | 'mentor' | 'admin' | 'super_admin'
+          is_admin?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -36,7 +38,8 @@ export interface Database {
           email?: string
           full_name?: string | null
           avatar_url?: string | null
-          role?: 'job_seeker' | 'mentor'
+          role?: 'job_seeker' | 'mentor' | 'admin' | 'super_admin'
+          is_admin?: boolean
           created_at?: string
           updated_at?: string
         }
