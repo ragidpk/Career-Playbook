@@ -166,6 +166,28 @@ export interface Database {
           date_added: string
           created_at: string
           updated_at: string
+          // Contact Information
+          contact_name: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          contact_linkedin: string | null
+          contact_title: string | null
+          // Job Details
+          job_title: string | null
+          job_posting_url: string | null
+          salary_range: string | null
+          // Company Details
+          industry: string | null
+          company_size: string | null
+          location: string | null
+          company_linkedin: string | null
+          // Tracking Fields
+          application_date: string | null
+          last_contact_date: string | null
+          next_followup_date: string | null
+          referral_source: string | null
+          priority: number
+          is_favorite: boolean
         }
         Insert: {
           id?: string
@@ -177,6 +199,28 @@ export interface Database {
           date_added?: string
           created_at?: string
           updated_at?: string
+          // Contact Information
+          contact_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_linkedin?: string | null
+          contact_title?: string | null
+          // Job Details
+          job_title?: string | null
+          job_posting_url?: string | null
+          salary_range?: string | null
+          // Company Details
+          industry?: string | null
+          company_size?: string | null
+          location?: string | null
+          company_linkedin?: string | null
+          // Tracking Fields
+          application_date?: string | null
+          last_contact_date?: string | null
+          next_followup_date?: string | null
+          referral_source?: string | null
+          priority?: number
+          is_favorite?: boolean
         }
         Update: {
           id?: string
@@ -188,6 +232,28 @@ export interface Database {
           date_added?: string
           created_at?: string
           updated_at?: string
+          // Contact Information
+          contact_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_linkedin?: string | null
+          contact_title?: string | null
+          // Job Details
+          job_title?: string | null
+          job_posting_url?: string | null
+          salary_range?: string | null
+          // Company Details
+          industry?: string | null
+          company_size?: string | null
+          location?: string | null
+          company_linkedin?: string | null
+          // Tracking Fields
+          application_date?: string | null
+          last_contact_date?: string | null
+          next_followup_date?: string | null
+          referral_source?: string | null
+          priority?: number
+          is_favorite?: boolean
         }
       }
       resume_analyses: {

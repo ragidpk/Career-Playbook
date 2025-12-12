@@ -24,7 +24,7 @@ const navItems = [
   { path: '/plan', label: '90-Day Plan', icon: FileText },
   { path: '/resume', label: 'Resume Analysis', icon: FileText },
   { path: '/jobs', label: 'Job Board', icon: Briefcase },
-  { path: '/crm', label: 'Company Tracker', icon: Building2 },
+  { path: '/crm', label: 'Job Hunt CRM', icon: Building2 },
   { path: '/interviews', label: 'Interviews', icon: Calendar },
   { path: '/mentors', label: 'Mentors', icon: Users },
 ];

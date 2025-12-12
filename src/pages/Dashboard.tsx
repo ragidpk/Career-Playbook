@@ -61,14 +61,14 @@ export default function Dashboard() {
             </div>
 
             <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-              <h3 className="text-xl font-semibold mb-4">Company Tracker</h3>
-              <p className="text-gray-600 mb-4">Track companies in your job search</p>
+              <h3 className="text-xl font-semibold mb-4">Job Hunt CRM</h3>
+              <p className="text-gray-600 mb-4">Track companies, contacts, and opportunities</p>
               <button
                 onClick={() => navigate('/crm')}
                 className="text-primary-500 hover:text-primary-600 font-medium"
                 type="button"
               >
-                Manage Companies &rarr;
+                Manage CRM &rarr;
               </button>
             </div>
 

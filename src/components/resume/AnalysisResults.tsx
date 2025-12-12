@@ -19,11 +19,12 @@ import Card from '../shared/Card';
 import ATSScore from './ATSScore';
 import PrintableReport from './PrintableReport';
 
-// A4 dimensions at 96 DPI
-const A4_WIDTH_PX = 794;
+// A4 dimensions
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
-const PX_TO_MM = 25.4 / 96; // Convert pixels to mm at 96 DPI
+// Use 96 DPI as base for mm-to-px conversion (browser standard)
+const MM_TO_PX = 96 / 25.4; // ~3.78 px per mm
+const A4_WIDTH_PX = Math.round(A4_WIDTH_MM * MM_TO_PX); // ~794px
 
 interface NinetyDayStrategy {
   overview: string;
@@ -148,18 +149,15 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
         format: 'a4',
       });
 
-      // Convert canvas dimensions (in scaled pixels) back to mm
-      // Canvas is captured at SCALE, so actual content px = canvas.width / SCALE
-      const contentWidthPx = canvas.width / SCALE;
-      const contentHeightPx = canvas.height / SCALE;
+      // The element is styled at 210mm width, so the canvas captures at A4_WIDTH_PX
+      // Canvas is captured at SCALE multiplier for quality
+      // We need to fit the full image width to A4_WIDTH_MM
+      const canvasWidthPx = canvas.width;
+      const canvasHeightPx = canvas.height;
 
-      // Convert px to mm using the constant
-      const contentWidthMm = contentWidthPx * PX_TO_MM;
-      const contentHeightMm = contentHeightPx * PX_TO_MM;
-
-      // Scale factor to fit content width to A4 width
-      const fitScale = A4_WIDTH_MM / contentWidthMm;
-      const scaledHeightMm = contentHeightMm * fitScale;
+      // Calculate the image height in mm when scaled to fit A4 width
+      // Ratio: A4_WIDTH_MM / canvasWidthPx gives us mm per canvas pixel
+      const scaledHeightMm = (canvasHeightPx * A4_WIDTH_MM) / canvasWidthPx;
 
       // Calculate number of pages needed
       const pageCount = Math.ceil(scaledHeightMm / A4_HEIGHT_MM);
@@ -168,6 +166,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
         if (i > 0) pdf.addPage();
 
         // Position image to show correct portion on each page
+        // Negative Y offset moves the image up to show subsequent pages
         const yOffsetMm = -i * A4_HEIGHT_MM;
 
         pdf.addImage(
@@ -233,7 +232,8 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
             <button
               onClick={() => setToast(null)}
               className="ml-2 p-1 rounded hover:bg-white/20 transition-colors"
-              aria-label="Close notification"
+              aria-label="Dismiss"
+              title="Dismiss notification"
             >
               <X className="h-4 w-4" />
             </button>
@@ -641,7 +641,22 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
       {/* Print Styles - Enhanced for proper printing */}
       <style>{`
         @media print {
-          /* Hide screen-only content but keep #root visible */
+          /* Reset body and html for print */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+
+          /* Keep #root visible but reset its styles */
+          #root {
+            display: block !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* Hide screen-only content */
           .print\\:hidden,
           .space-y-6.print\\:hidden {
             display: none !important;
@@ -660,13 +675,17 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
             position: static !important;
             left: auto !important;
             width: 100% !important;
+            max-width: 100% !important;
             pointer-events: auto !important;
+            margin: 0 !important;
+            padding: 15mm 20mm !important;
+            box-sizing: border-box !important;
           }
 
-          /* Page setup */
+          /* Page setup - no margins since PrintableReport has its own padding */
           @page {
             size: A4 portrait;
-            margin: 15mm 20mm;
+            margin: 0;
           }
 
           /* Ensure good page breaks */
