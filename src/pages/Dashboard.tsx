@@ -1,21 +1,17 @@
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import AnalyticsDashboard from '../components/analytics/AnalyticsDashboard';
-import NotificationBell from '../components/notifications/NotificationBell';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="p-6 sm:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {user?.user_metadata?.full_name || 'there'}!
-          </h1>
-          {user && <NotificationBell userId={user.id} />}
-        </div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
+          Welcome back, {user?.user_metadata?.full_name || 'there'}!
+        </h1>
 
         {/* Analytics Dashboard */}
         {user && (

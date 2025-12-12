@@ -1,30 +1,19 @@
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import NotificationSettings from '../components/notifications/NotificationSettings';
 
 export default function Settings() {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   if (!user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="p-6 sm:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Back to Dashboard
-          </button>
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h1>
           <p className="text-gray-600 mt-2">Manage your account preferences and notifications</p>
         </div>
 

@@ -18,6 +18,7 @@ import MentorView from './pages/MentorView';
 import AcceptInvitation from './pages/AcceptInvitation';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/shared/ProtectedRoute';
+import Layout from './components/layout/Layout';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,19 +42,21 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/reset-password" element={<ResetPassword />} />
 
-            {/* Protected routes */}
+            {/* Protected routes with Layout */}
             <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/canvas" element={<Canvas />} />
-              <Route path="/plan" element={<Plan />} />
-              <Route path="/resume" element={<Resume />} />
-              <Route path="/crm" element={<CRM />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/interviews" element={<Interviews />} />
-              <Route path="/mentors" element={<Mentors />} />
-              <Route path="/mentor-view" element={<MentorView />} />
-              <Route path="/accept-invitation" element={<AcceptInvitation />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route element={<Layout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/canvas" element={<Canvas />} />
+                <Route path="/plan" element={<Plan />} />
+                <Route path="/resume" element={<Resume />} />
+                <Route path="/crm" element={<CRM />} />
+                <Route path="/jobs" element={<Jobs />} />
+                <Route path="/interviews" element={<Interviews />} />
+                <Route path="/mentors" element={<Mentors />} />
+                <Route path="/mentor-view" element={<MentorView />} />
+                <Route path="/accept-invitation" element={<AcceptInvitation />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
             </Route>
 
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
