@@ -1,4 +1,13 @@
-import { Star, MapPin, Briefcase, User, Calendar, ExternalLink, Edit2, Trash2 } from 'lucide-react';
+import {
+  Star,
+  MapPin,
+  DollarSign,
+  User,
+  Calendar,
+  ExternalLink,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import { STATUS_OPTIONS } from './StatusFilter';
 import type { Company } from '../../services/company.service';
 
@@ -11,10 +20,10 @@ interface CompanyCardProps {
 
 const PRIORITY_COLORS = {
   1: 'bg-gray-100 text-gray-600',
-  2: 'bg-blue-100 text-blue-600',
-  3: 'bg-yellow-100 text-yellow-600',
+  2: 'bg-primary-50 text-primary-600',
+  3: 'bg-warning-50 text-warning-600',
   4: 'bg-orange-100 text-orange-600',
-  5: 'bg-red-100 text-red-600',
+  5: 'bg-error-50 text-error-600',
 };
 
 const PRIORITY_LABELS = {
@@ -25,8 +34,15 @@ const PRIORITY_LABELS = {
   5: 'High',
 };
 
-export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorite }: CompanyCardProps) {
-  const statusOption = STATUS_OPTIONS.find((opt) => opt.value === company.status);
+export default function CompanyCard({
+  company,
+  onEdit,
+  onDelete,
+  onToggleFavorite,
+}: CompanyCardProps) {
+  const statusOption = STATUS_OPTIONS.find(
+    (opt) => opt.value === company.status
+  );
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null;
@@ -47,32 +63,34 @@ export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorit
     if (!company.next_followup_date) return false;
     const today = new Date();
     const followup = new Date(company.next_followup_date);
-    const diffDays = Math.ceil((followup.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil(
+      (followup.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
     return diffDays >= 0 && diffDays <= 3;
   };
 
   return (
-    <div className="bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-smooth">
       {/* Header with company name and actions */}
-      <div className="p-4 border-b border-gray-100">
+      <div className="p-5 border-b border-gray-100">
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900 truncate">
+              <h3 className="font-display text-lg font-semibold text-gray-900 truncate">
                 {company.name}
               </h3>
               {company.is_favorite && (
-                <Star className="w-4 h-4 text-yellow-500 fill-current flex-shrink-0" />
+                <Star className="w-4 h-4 text-warning-500 fill-current flex-shrink-0" />
               )}
             </div>
             {company.job_title && (
-              <p className="text-sm text-primary-600 font-medium truncate mt-0.5">
+              <p className="text-sm text-primary-600 font-medium truncate mt-1">
                 {company.job_title}
               </p>
             )}
             {company.location && (
-              <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
-                <MapPin className="w-3 h-3" />
+              <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-1.5">
+                <MapPin className="w-3.5 h-3.5 text-gray-400" />
                 <span className="truncate">{company.location}</span>
               </div>
             )}
@@ -82,28 +100,34 @@ export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorit
               <button
                 type="button"
                 onClick={() => onToggleFavorite(company)}
-                className={`p-1.5 rounded transition-colors ${
+                className={`p-2 rounded-xl transition-smooth ${
                   company.is_favorite
-                    ? 'text-yellow-500 hover:bg-yellow-50'
-                    : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-100'
+                    ? 'text-warning-500 bg-warning-50'
+                    : 'text-gray-300 hover:text-warning-500 hover:bg-warning-50'
                 }`}
-                title={company.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                title={
+                  company.is_favorite
+                    ? 'Remove from favorites'
+                    : 'Add to favorites'
+                }
               >
-                <Star className={`w-4 h-4 ${company.is_favorite ? 'fill-current' : ''}`} />
+                <Star
+                  className={`w-4 h-4 ${company.is_favorite ? 'fill-current' : ''}`}
+                />
               </button>
             )}
             <button
               type="button"
               onClick={() => onEdit(company)}
-              className="p-1.5 text-gray-500 hover:text-primary-500 hover:bg-gray-100 rounded transition-colors"
+              className="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-xl transition-smooth"
               aria-label="Edit company"
             >
-              <Edit2 className="w-4 h-4" />
+              <Pencil className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => onDelete(company)}
-              className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+              className="p-2 text-gray-400 hover:text-error-500 hover:bg-error-50 rounded-xl transition-smooth"
               aria-label="Delete company"
             >
               <Trash2 className="w-4 h-4" />
@@ -113,17 +137,23 @@ export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorit
       </div>
 
       {/* Body with details */}
-      <div className="p-4 space-y-3">
+      <div className="p-5 space-y-4">
         {/* Status and Priority badges */}
         <div className="flex flex-wrap gap-2">
-          <span className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full ${statusOption?.color}`}>
+          <span
+            className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-pill ${statusOption?.color}`}
+          >
             {statusOption?.label}
           </span>
-          <span className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full ${PRIORITY_COLORS[company.priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS[3]}`}>
-            {PRIORITY_LABELS[company.priority as keyof typeof PRIORITY_LABELS] || 'Medium'} Priority
+          <span
+            className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-pill ${PRIORITY_COLORS[company.priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS[3]}`}
+          >
+            {PRIORITY_LABELS[company.priority as keyof typeof PRIORITY_LABELS] ||
+              'Medium'}{' '}
+            Priority
           </span>
           {company.industry && (
-            <span className="inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-600">
+            <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-pill bg-purple-50 text-purple-600">
               {company.industry}
             </span>
           )}
@@ -133,7 +163,9 @@ export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorit
         {company.contact_name && (
           <div className="flex items-center gap-2 text-sm">
             <User className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-700">{company.contact_name}</span>
+            <span className="text-gray-700 font-medium">
+              {company.contact_name}
+            </span>
             {company.contact_title && (
               <span className="text-gray-500">({company.contact_title})</span>
             )}
@@ -143,7 +175,7 @@ export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorit
         {/* Salary Range */}
         {company.salary_range && (
           <div className="flex items-center gap-2 text-sm">
-            <Briefcase className="w-4 h-4 text-gray-400" />
+            <DollarSign className="w-4 h-4 text-gray-400" />
             <span className="text-gray-700">{company.salary_range}</span>
           </div>
         )}
@@ -151,31 +183,39 @@ export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorit
         {/* Dates */}
         <div className="flex flex-wrap gap-3 text-xs text-gray-500">
           {company.application_date && (
-            <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-gray-400" />
               <span>Applied: {formatDate(company.application_date)}</span>
             </div>
           )}
           {company.next_followup_date && (
-            <div className={`flex items-center gap-1 ${
-              isFollowupOverdue()
-                ? 'text-red-600 font-medium'
-                : isFollowupSoon()
-                  ? 'text-yellow-600 font-medium'
-                  : ''
-            }`}>
-              <Calendar className="w-3 h-3" />
+            <div
+              className={`flex items-center gap-1.5 ${
+                isFollowupOverdue()
+                  ? 'text-error-600 font-medium'
+                  : isFollowupSoon()
+                    ? 'text-warning-600 font-medium'
+                    : ''
+              }`}
+            >
+              <Calendar
+                className={`w-3.5 h-3.5 ${isFollowupOverdue() ? 'text-error-500' : isFollowupSoon() ? 'text-warning-500' : 'text-gray-400'}`}
+              />
               <span>Follow-up: {formatDate(company.next_followup_date)}</span>
-              {isFollowupOverdue() && <span className="text-red-500">(Overdue)</span>}
+              {isFollowupOverdue() && (
+                <span className="bg-error-50 text-error-600 px-2 py-0.5 rounded-pill font-semibold">
+                  Overdue
+                </span>
+              )}
             </div>
           )}
         </div>
 
         {/* Notes preview */}
         {company.notes && (
-          <p className="text-sm text-gray-600 line-clamp-2 border-t border-gray-100 pt-2">
-            {company.notes}
-          </p>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-sm text-gray-600 line-clamp-2">{company.notes}</p>
+          </div>
         )}
 
         {/* Links */}
@@ -185,7 +225,7 @@ export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorit
               href={company.website_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 hover:underline"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-pill transition-smooth"
             >
               <ExternalLink className="w-3 h-3" />
               Website
@@ -196,7 +236,7 @@ export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorit
               href={company.job_posting_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 hover:underline"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-pill transition-smooth"
             >
               <ExternalLink className="w-3 h-3" />
               Job Posting
@@ -204,10 +244,14 @@ export default function CompanyCard({ company, onEdit, onDelete, onToggleFavorit
           )}
           {company.company_linkedin && (
             <a
-              href={company.company_linkedin.startsWith('http') ? company.company_linkedin : `https://${company.company_linkedin}`}
+              href={
+                company.company_linkedin.startsWith('http')
+                  ? company.company_linkedin
+                  : `https://${company.company_linkedin}`
+              }
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 hover:underline"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-pill transition-smooth"
             >
               <ExternalLink className="w-3 h-3" />
               LinkedIn

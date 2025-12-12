@@ -10,7 +10,13 @@ interface ModalProps {
   className?: string;
 }
 
-export default function Modal({ open, onClose, children, title, className = '' }: ModalProps) {
+export default function Modal({
+  open,
+  onClose,
+  children,
+  title,
+  className = '',
+}: ModalProps) {
   return (
     <Transition appear show={open} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -23,7 +29,7 @@ export default function Modal({ open, onClose, children, title, className = '' }
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -37,9 +43,14 @@ export default function Modal({ open, onClose, children, title, className = '' }
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className={`w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all ${className}`}>
+              <Dialog.Panel
+                className={`w-full max-w-md transform overflow-hidden rounded-3xl bg-white p-8 text-left align-middle shadow-elevated transition-all ${className}`}
+              >
                 {title && (
-                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                  <Dialog.Title
+                    as="h3"
+                    className="font-display text-xl font-semibold text-gray-900 mb-6"
+                  >
                     {title}
                   </Dialog.Title>
                 )}

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -23,6 +24,33 @@ export function useToast() {
   return context;
 }
 
+const toastConfig = {
+  success: {
+    bg: 'bg-success-50',
+    border: 'border-success-500',
+    text: 'text-success-600',
+    icon: CheckCircle,
+  },
+  error: {
+    bg: 'bg-error-50',
+    border: 'border-error-500',
+    text: 'text-error-600',
+    icon: XCircle,
+  },
+  warning: {
+    bg: 'bg-warning-50',
+    border: 'border-warning-500',
+    text: 'text-warning-600',
+    icon: AlertTriangle,
+  },
+  info: {
+    bg: 'bg-primary-50',
+    border: 'border-primary-500',
+    text: 'text-primary-600',
+    icon: Info,
+  },
+};
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -32,7 +60,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
     setToasts((prev) => [...prev, newToast]);
 
-    // Auto-dismiss after 5 seconds
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 5000);
@@ -42,37 +69,62 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const typeStyles = {
-    success: 'bg-success text-white',
-    error: 'bg-error text-white',
-    warning: 'bg-warning text-white',
-    info: 'bg-primary-500 text-white',
-  };
-
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
 
-      {/* Toast container */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`px-6 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] animate-slide-in ${typeStyles[toast.type]}`}
-          >
-            <span>{toast.message}</span>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="ml-4 text-white hover:text-gray-200 text-xl font-bold leading-none"
-              aria-label="Dismiss"
-              title="Dismiss notification"
-              type="button"
+      <div className="fixed top-4 right-4 z-50 space-y-3">
+        {toasts.map((toast) => {
+          const config = toastConfig[toast.type];
+          const Icon = config.icon;
+
+          return (
+            <div
+              key={toast.id}
+              className={`
+                flex items-center gap-3 px-5 py-4 rounded-2xl shadow-elevated
+                border-l-4 ${config.bg} ${config.border}
+                min-w-[320px] max-w-md
+                animate-[slideIn_0.3s_ease-out]
+              `}
+              style={{
+                animation: 'slideIn 0.3s ease-out',
+              }}
             >
-              &times;
-            </button>
-          </div>
-        ))}
+              <div
+                className={`w-10 h-10 rounded-xl ${config.bg} flex items-center justify-center flex-shrink-0`}
+              >
+                <Icon className={`w-5 h-5 ${config.text}`} />
+              </div>
+              <span className="text-gray-700 font-medium flex-1">
+                {toast.message}
+              </span>
+              <button
+                onClick={() => removeToast(toast.id)}
+                className="p-1.5 rounded-lg hover:bg-gray-200/50 text-gray-400 hover:text-gray-600 transition-smooth"
+                aria-label="Dismiss"
+                title="Dismiss notification"
+                type="button"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        })}
       </div>
+
+      <style>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </ToastContext.Provider>
   );
 }

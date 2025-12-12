@@ -4,14 +4,27 @@ interface CardProps {
   children: ReactNode;
   title?: string;
   className?: string;
+  variant?: 'default' | 'elevated' | 'interactive';
 }
 
-export default function Card({ children, title, className = '' }: CardProps) {
+export default function Card({
+  children,
+  title,
+  className = '',
+  variant = 'default',
+}: CardProps) {
+  const variantStyles = {
+    default: 'bg-white rounded-2xl shadow-card',
+    elevated: 'bg-white rounded-2xl shadow-elevated',
+    interactive:
+      'bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-smooth cursor-pointer',
+  };
+
   return (
-    <div className={`bg-white rounded-lg shadow-md border border-gray-200 ${className}`}>
+    <div className={`${variantStyles[variant]} ${className}`}>
       {title && (
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <div className="px-6 pt-6 pb-0">
+          <span className="section-label">{title}</span>
         </div>
       )}
       <div className="p-6">{children}</div>

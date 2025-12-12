@@ -8,7 +8,6 @@ import {
   FileText,
   Heart,
   Check,
-  Briefcase,
   Instagram,
   Facebook,
   Twitter,
@@ -82,13 +81,12 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center shadow-button">
-                <Briefcase className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-display text-xl font-bold text-gray-900">
-                Career Playbook
-              </span>
+            <Link to="/" className="flex items-center">
+              <img
+                src="/images/logo.svg"
+                alt="Career Playbook"
+                className="h-10"
+              />
             </Link>
 
             {/* Desktop Nav */}
@@ -180,11 +178,19 @@ export default function LandingPage() {
                 <p className="text-sm text-gray-500 mb-4">
                   Trusted by professionals at
                 </p>
-                <div className="flex items-center gap-8 opacity-50">
-                  {/* Placeholder logos */}
-                  <div className="h-8 w-24 bg-gray-300 rounded" />
-                  <div className="h-8 w-20 bg-gray-300 rounded" />
-                  <div className="h-8 w-28 bg-gray-300 rounded" />
+                <div className="flex flex-wrap items-center gap-6 lg:gap-8">
+                  <span className="font-display font-bold text-lg text-gray-400 hover:text-gray-600 transition-smooth">
+                    NYUAD
+                  </span>
+                  <span className="font-display font-bold text-lg text-gray-400 hover:text-gray-600 transition-smooth">
+                    Al Futtaim
+                  </span>
+                  <span className="font-display font-bold text-lg text-gray-400 hover:text-gray-600 transition-smooth">
+                    BUiD
+                  </span>
+                  <span className="font-display font-bold text-lg text-gray-400 hover:text-gray-600 transition-smooth">
+                    MAF
+                  </span>
                 </div>
               </div>
             </div>
@@ -319,11 +325,14 @@ export default function LandingPage() {
 
       {/* CTA Section */}
       <section className="relative py-24 lg:py-32 overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gray-900">
-          {/* Placeholder for background image */}
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/95 to-gray-900/80" />
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            src="/images/bottom-img1.webp"
+            alt="Career community"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 to-gray-900/70" />
         </div>
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -350,13 +359,12 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-5 gap-12 mb-12">
             {/* Brand Column */}
             <div className="lg:col-span-2">
-              <Link to="/" className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-white" />
-                </div>
-                <span className="font-display text-xl font-bold text-white">
-                  Career Playbook
-                </span>
+              <Link to="/" className="flex items-center mb-4">
+                <img
+                  src="/images/logo.svg"
+                  alt="Career Playbook"
+                  className="h-10 brightness-0 invert"
+                />
               </Link>
               <p className="text-gray-400 mb-6 max-w-sm">
                 Plan your career, achieve your goals with AI-powered guidance.

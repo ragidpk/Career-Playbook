@@ -78,13 +78,12 @@ export default function Layout() {
       >
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-5">
-          <NavLink to="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center shadow-button">
-              <Briefcase className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-display text-lg font-bold text-gray-900">
-              Career Playbook
-            </span>
+          <NavLink to="/dashboard" className="flex items-center">
+            <img
+              src="/images/logo.svg"
+              alt="Career Playbook"
+              className="h-8"
+            />
           </NavLink>
           <button
             type="button"
