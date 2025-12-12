@@ -12,11 +12,18 @@ import {
   ChevronUp,
   Download,
   Printer,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import Card from '../shared/Card';
 import ATSScore from './ATSScore';
 import PrintableReport from './PrintableReport';
+
+// A4 dimensions at 96 DPI
+const A4_WIDTH_PX = 794;
+const A4_WIDTH_MM = 210;
+const A4_HEIGHT_MM = 297;
+const PX_TO_MM = 25.4 / 96; // Convert pixels to mm at 96 DPI
 
 interface NinetyDayStrategy {
   overview: string;
@@ -115,56 +122,61 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
 
       const element = printRef.current;
 
-      // A4 dimensions in pixels at 96 DPI: 794 x 1123
-      // Using scale 2 for better quality
+      // Capture at pinned A4 dimensions with scale 2 for quality
+      const SCALE = 2;
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: SCALE,
         useCORS: true,
         allowTaint: false,
         logging: false,
         backgroundColor: '#ffffff',
-        width: element.scrollWidth,
-        height: element.scrollHeight,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
+        width: A4_WIDTH_PX,
+        windowWidth: A4_WIDTH_PX,
       });
+
+      // Check if canvas capture succeeded
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        throw new Error('Canvas capture failed');
+      }
 
       const imgData = canvas.toDataURL('image/png', 1.0);
 
-      // A4 size in mm: 210 x 297
+      // Create PDF with A4 dimensions in mm
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
       });
 
-      const pdfWidth = 210;  // A4 width in mm
-      const pdfHeight = 297; // A4 height in mm
+      // Convert canvas dimensions (in scaled pixels) back to mm
+      // Canvas is captured at SCALE, so actual content px = canvas.width / SCALE
+      const contentWidthPx = canvas.width / SCALE;
+      const contentHeightPx = canvas.height / SCALE;
 
-      // Calculate image dimensions to fit A4
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
+      // Convert px to mm using the constant
+      const contentWidthMm = contentWidthPx * PX_TO_MM;
+      const contentHeightMm = contentHeightPx * PX_TO_MM;
 
-      // Scale to fit width exactly, let height flow
-      const scale = pdfWidth / (imgWidth / 2); // Divide by 2 because of scale: 2
-      const scaledHeight = (imgHeight / 2) * scale;
+      // Scale factor to fit content width to A4 width
+      const fitScale = A4_WIDTH_MM / contentWidthMm;
+      const scaledHeightMm = contentHeightMm * fitScale;
 
       // Calculate number of pages needed
-      const pageCount = Math.ceil(scaledHeight / pdfHeight);
+      const pageCount = Math.ceil(scaledHeightMm / A4_HEIGHT_MM);
 
       for (let i = 0; i < pageCount; i++) {
         if (i > 0) pdf.addPage();
 
         // Position image to show correct portion on each page
-        const yOffset = -i * pdfHeight;
+        const yOffsetMm = -i * A4_HEIGHT_MM;
 
         pdf.addImage(
           imgData,
           'PNG',
           0,
-          yOffset,
-          pdfWidth,
-          scaledHeight
+          yOffsetMm,
+          A4_WIDTH_MM,
+          scaledHeightMm
         );
       }
 
@@ -175,7 +187,10 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
       showToast('PDF downloaded successfully!', 'success');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      showToast('Failed to generate PDF. Please try again.', 'error');
+      const errorMessage = error instanceof Error && error.message === 'Canvas capture failed'
+        ? 'Failed to capture content. Please try again.'
+        : 'Failed to generate PDF. Please try again.';
+      showToast(errorMessage, 'error');
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -217,10 +232,10 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
             <span>{toast.message}</span>
             <button
               onClick={() => setToast(null)}
-              className="ml-2 font-bold hover:opacity-80"
-              aria-label="Dismiss notification"
+              className="ml-2 p-1 rounded hover:bg-white/20 transition-colors"
+              aria-label="Close notification"
             >
-              ×
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -626,25 +641,26 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
       {/* Print Styles - Enhanced for proper printing */}
       <style>{`
         @media print {
-          /* Hide everything except printable content */
-          body > *:not(.print-only) {
+          /* Hide screen-only content but keep #root visible */
+          .print\\:hidden,
+          .space-y-6.print\\:hidden {
             display: none !important;
           }
 
-          /* Hide app chrome */
+          /* Hide app chrome elements */
           nav, header, footer, aside,
           .sidebar, .navigation, .toast,
-          button, .no-print {
+          .no-print {
             display: none !important;
           }
 
-          /* Show only print content */
+          /* Show print content - move from off-screen to visible */
           .print-only {
             display: block !important;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+            position: static !important;
+            left: auto !important;
+            width: 100% !important;
+            pointer-events: auto !important;
           }
 
           /* Page setup */
