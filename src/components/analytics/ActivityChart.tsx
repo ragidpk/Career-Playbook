@@ -8,8 +8,8 @@ interface ActivityChartProps {
 export default function ActivityChart({ data, title = 'Weekly Activity' }: ActivityChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">{title}</h3>
+      <div className="bg-white rounded-2xl shadow-card p-6">
+        <h3 className="text-lg font-display font-semibold text-gray-900 mb-6">{title}</h3>
         <div className="flex items-center justify-center h-64 text-gray-400">
           No activity data available
         </div>
@@ -20,8 +20,8 @@ export default function ActivityChart({ data, title = 'Weekly Activity' }: Activ
   const maxValue = Math.max(...data.map(d => d.count), 1);
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">{title}</h3>
+    <div className="bg-white rounded-2xl shadow-card p-6">
+      <h3 className="text-lg font-display font-semibold text-gray-900 mb-6">{title}</h3>
       <div className="flex items-end justify-between h-64 gap-2">
         {data.map((item, index) => {
           const heightPercentage = maxValue > 0 ? (item.count / maxValue) * 100 : 0;

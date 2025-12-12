@@ -19,8 +19,8 @@ export default function FunnelChart({ data }: FunnelChartProps) {
   const rejectedCount = data.rejected;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">Application Funnel</h3>
+    <div className="bg-white rounded-2xl shadow-card p-6">
+      <h3 className="text-lg font-display font-semibold text-gray-900 mb-6">Application Funnel</h3>
       <div className="space-y-4">
         {stages.map((stage) => {
           const widthPercentage = maxValue > 0 ? (stage.value / maxValue) * 100 : 0;

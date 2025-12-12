@@ -15,8 +15,8 @@ const statusColors: Record<string, string> = {
 export default function StatusPieChart({ data }: StatusPieChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">Status Breakdown</h3>
+      <div className="bg-white rounded-2xl shadow-card p-6">
+        <h3 className="text-lg font-display font-semibold text-gray-900 mb-6">Status Breakdown</h3>
         <div className="flex items-center justify-center h-64 text-gray-400">
           No company data available
         </div>
@@ -30,8 +30,8 @@ export default function StatusPieChart({ data }: StatusPieChartProps) {
   let cumulativePercentage = 0;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">Status Breakdown</h3>
+    <div className="bg-white rounded-2xl shadow-card p-6">
+      <h3 className="text-lg font-display font-semibold text-gray-900 mb-6">Status Breakdown</h3>
 
       <div className="flex items-center justify-center mb-6">
         <div className="relative w-48 h-48">

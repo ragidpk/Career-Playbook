@@ -46,12 +46,12 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
     <div className="space-y-6">
       {/* Header with date range selector */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
+        <h2 className="text-2xl font-display font-bold text-gray-900">Analytics Dashboard</h2>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white rounded-lg shadow px-1 py-1">
+          <div className="flex items-center gap-2 bg-white rounded-2xl shadow-card px-1 py-1">
             <button
               onClick={() => setDateRange('week')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-pill text-sm font-medium transition-colors ${
                 dateRange === 'week'
                   ? 'bg-primary-100 text-primary-700'
                   : 'text-gray-600 hover:text-gray-900'
@@ -62,7 +62,7 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
             </button>
             <button
               onClick={() => setDateRange('month')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-pill text-sm font-medium transition-colors ${
                 dateRange === 'month'
                   ? 'bg-primary-100 text-primary-700'
                   : 'text-gray-600 hover:text-gray-900'
@@ -73,7 +73,7 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
             </button>
             <button
               onClick={() => setDateRange('all')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-pill text-sm font-medium transition-colors ${
                 dateRange === 'all'
                   ? 'bg-primary-100 text-primary-700'
                   : 'text-gray-600 hover:text-gray-900'
@@ -85,7 +85,7 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
           </div>
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl shadow-card text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             type="button"
           >
             <RefreshCw className="w-4 h-4" />
