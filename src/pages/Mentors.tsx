@@ -62,7 +62,7 @@ export default function Mentors() {
             </Button>
           </div>
           <p className="text-gray-600">
-            Invite mentors to view your Career Canvas and 90-Day Plan. They'll have read-only access
+            Invite mentors to view your Career Plans and 90-Day Plan. They'll have read-only access
             to support your career journey.
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function Mentors() {
             <div>
               <h3 className="font-medium text-blue-900">What mentors can see:</h3>
               <ul className="mt-2 text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>Your Career Canvas - goals, strengths, and aspirations</li>
+                <li>Your Career Plans - goals, strengths, and aspirations</li>
                 <li>Your 90-Day Plan - milestones and progress tracking</li>
               </ul>
               <p className="mt-2 text-sm text-blue-800">

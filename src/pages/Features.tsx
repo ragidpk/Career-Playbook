@@ -75,7 +75,7 @@ const mainFeatures = [
 const additionalFeatures = [
   {
     icon: Brain,
-    title: 'Career Canvas',
+    title: 'Your Career Plans',
     description: '9-section self-assessment framework to visualize every aspect of your professional development.',
   },
   {

@@ -14,7 +14,7 @@ import AnalyticsDashboard from '../components/analytics/AnalyticsDashboard';
 
 const quickActions = [
   {
-    title: 'Career Canvas',
+    title: 'Your Career Plans',
     description: 'Define your career value proposition',
     icon: Target,
     path: '/canvas',

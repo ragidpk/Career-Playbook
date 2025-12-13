@@ -19,7 +19,7 @@ const features = [
     icon: Calendar,
     title: 'Structured Career Planning',
     description:
-      'Create comprehensive 52-week career roadmaps with AI-generated milestones tailored to your unique goals and circumstances. Our Career Canvas framework helps you visualize and plan every aspect of your professional development.',
+      'Create comprehensive 52-week career roadmaps with AI-generated milestones tailored to your unique goals and circumstances. Our Career Plans framework helps you visualize and plan every aspect of your professional development.',
     color: 'bg-primary-500',
   },
   {

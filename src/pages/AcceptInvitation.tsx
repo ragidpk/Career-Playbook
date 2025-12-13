@@ -134,7 +134,7 @@ export default function AcceptInvitation() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Mentor Invitation</h2>
           <p className="text-gray-600 mb-6">
             You've been invited to become a career mentor. By accepting, you'll have read-only
-            access to view your mentee's Career Canvas and 90-Day Plan.
+            access to view your mentee's Career Plans and 90-Day Plan.
           </p>
 
           {error && (

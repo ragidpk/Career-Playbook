@@ -135,7 +135,7 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
           subtitle={`${planProgress?.completed || 0} of ${planProgress?.totalMilestones || 0} milestones completed`}
         />
         <ProgressBar
-          title="Career Canvas Completion"
+          title="Your Career Plans Completion"
           percentage={canvasCompletion?.completionPercentage || 0}
           color="info"
           subtitle={`${canvasCompletion?.sectionsCompleted || 0} of ${canvasCompletion?.totalSections || 9} sections filled`}

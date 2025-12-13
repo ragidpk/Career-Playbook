@@ -46,7 +46,7 @@ export default function CareerCanvas({ canvas, onSave, isSaving }: CareerCanvasP
       {/* Header */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">Career Canvas</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Your Career Plans</h1>
           {/* Save Status Indicator */}
           <div className="flex items-center gap-2">
             {isSaving ? (
@@ -101,7 +101,7 @@ export default function CareerCanvas({ canvas, onSave, isSaving }: CareerCanvasP
       {/* Footer Help Text */}
       <div className="text-center">
         <p className="text-sm text-gray-500">
-          Your Career Canvas helps you clarify your career direction and identify opportunities
+          Your Career Plans helps you clarify your career direction and identify opportunities
           that align with your goals.
         </p>
       </div>

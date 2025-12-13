@@ -19,7 +19,7 @@ export default function CanvasProgress({ percentage }: CanvasProgressProps) {
           aria-valuenow={displayPercentage}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`Career Canvas ${displayPercentage}% complete`}
+          aria-label={`Your Career Plans ${displayPercentage}% complete`}
         />
       </div>
       {displayPercentage === 100 ? (
@@ -28,7 +28,7 @@ export default function CanvasProgress({ percentage }: CanvasProgressProps) {
         </p>
       ) : (
         <p className="text-sm text-gray-600">
-          Fill out all 9 sections to complete your Career Canvas
+          Fill out all 9 sections to complete your Career Plans
         </p>
       )}
     </div>

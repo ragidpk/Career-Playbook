@@ -22,7 +22,7 @@ import NotificationBell from '../notifications/NotificationBell';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/canvas', label: 'Career Canvas', icon: Target },
+  { path: '/canvas', label: 'Your Career Plans', icon: Target },
   { path: '/plan', label: '90-Day Plan', icon: FileText },
   { path: '/resume', label: 'Resume Analysis', icon: FileText },
   { path: '/jobs', label: 'Job Board', icon: Briefcase },
