@@ -20,6 +20,26 @@ export interface Database {
           avatar_url: string | null
           role: 'job_seeker' | 'mentor' | 'admin' | 'super_admin'
           is_admin: boolean
+          // Contact Information
+          phone_number: string | null
+          current_location: string | null
+          linkedin_url: string | null
+          // Career Information
+          years_of_experience: string | null
+          current_role: string | null
+          specialization: string | null
+          areas_of_expertise: string[] | null
+          // Career Goals
+          target_role: string | null
+          target_industry: string | null
+          job_search_status: 'actively_looking' | 'passively_looking' | 'employed_not_looking' | 'open_to_opportunities' | null
+          work_preference: 'remote' | 'hybrid' | 'onsite' | 'flexible' | null
+          salary_expectation: string | null
+          education_level: 'high_school' | 'associate' | 'bachelor' | 'master' | 'doctorate' | 'other' | null
+          skills: string[] | null
+          // Onboarding
+          profile_completed: boolean
+          onboarding_completed_at: string | null
           created_at: string
           updated_at: string
         }
@@ -30,6 +50,22 @@ export interface Database {
           avatar_url?: string | null
           role?: 'job_seeker' | 'mentor' | 'admin' | 'super_admin'
           is_admin?: boolean
+          phone_number?: string | null
+          current_location?: string | null
+          linkedin_url?: string | null
+          years_of_experience?: string | null
+          current_role?: string | null
+          specialization?: string | null
+          areas_of_expertise?: string[] | null
+          target_role?: string | null
+          target_industry?: string | null
+          job_search_status?: 'actively_looking' | 'passively_looking' | 'employed_not_looking' | 'open_to_opportunities' | null
+          work_preference?: 'remote' | 'hybrid' | 'onsite' | 'flexible' | null
+          salary_expectation?: string | null
+          education_level?: 'high_school' | 'associate' | 'bachelor' | 'master' | 'doctorate' | 'other' | null
+          skills?: string[] | null
+          profile_completed?: boolean
+          onboarding_completed_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -40,6 +76,22 @@ export interface Database {
           avatar_url?: string | null
           role?: 'job_seeker' | 'mentor' | 'admin' | 'super_admin'
           is_admin?: boolean
+          phone_number?: string | null
+          current_location?: string | null
+          linkedin_url?: string | null
+          years_of_experience?: string | null
+          current_role?: string | null
+          specialization?: string | null
+          areas_of_expertise?: string[] | null
+          target_role?: string | null
+          target_industry?: string | null
+          job_search_status?: 'actively_looking' | 'passively_looking' | 'employed_not_looking' | 'open_to_opportunities' | null
+          work_preference?: 'remote' | 'hybrid' | 'onsite' | 'flexible' | null
+          salary_expectation?: string | null
+          education_level?: 'high_school' | 'associate' | 'bachelor' | 'master' | 'doctorate' | 'other' | null
+          skills?: string[] | null
+          profile_completed?: boolean
+          onboarding_completed_at?: string | null
           created_at?: string
           updated_at?: string
         }

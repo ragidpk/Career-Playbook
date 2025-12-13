@@ -11,6 +11,7 @@ import Signup from './pages/Signup';
 import AuthCallback from './pages/AuthCallback';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Canvas from './pages/Canvas';
 import Plan from './pages/Plan';
@@ -54,6 +55,9 @@ function App() {
 
             {/* Protected routes with Layout */}
             <Route element={<ProtectedRoute />}>
+              {/* Onboarding - no layout */}
+              <Route path="/onboarding" element={<Onboarding />} />
+
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/canvas" element={<Canvas />} />
