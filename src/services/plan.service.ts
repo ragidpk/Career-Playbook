@@ -155,3 +155,45 @@ export async function deletePlan(planId: string): Promise<void> {
 
 // Note: Status enum values match DB constraint: 'not_started' | 'in_progress' | 'completed'
 // Week numbers are unique per plan (enforced by DB constraint: unique_plan_week)
+
+export interface CareerCanvasData {
+  section_1_helpers?: string | null;
+  section_2_activities?: string | null;
+  section_3_value?: string | null;
+  section_4_interactions?: string | null;
+  section_5_convince?: string | null;
+  section_6_skills?: string | null;
+  section_7_motivation?: string | null;
+  section_8_sacrifices?: string | null;
+  section_9_outcomes?: string | null;
+}
+
+export async function generateAIMilestones(
+  planId: string,
+  canvasData: CareerCanvasData
+): Promise<{ success: boolean; message: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('Not authenticated');
+  }
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/generate-milestones`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ planId, canvasData }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to generate milestones');
+  }
+
+  return data;
+}
