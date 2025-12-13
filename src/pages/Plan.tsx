@@ -102,8 +102,8 @@ export default function Plan() {
     );
   }
 
-  // Manual Creation Form
-  if (plans.length === 0 && creationMode === 'manual') {
+  // Manual Creation Form (shows regardless of existing plans)
+  if (creationMode === 'manual') {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-3xl mx-auto">
@@ -114,7 +114,7 @@ export default function Plan() {
               className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium mb-6 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to options
+              {plans.length > 0 ? 'Back to plans' : 'Back to options'}
             </button>
 
             {/* Header */}
