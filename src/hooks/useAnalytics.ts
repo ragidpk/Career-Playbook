@@ -70,6 +70,25 @@ export function useDashboardData(userId: string | undefined) {
   const canvasCompletion = useCanvasCompletion(userId);
   const overallStats = useOverallStats(userId);
 
+  const refetch = async () => {
+    await Promise.all([
+      funnel.refetch(),
+      activity.refetch(),
+      statusBreakdown.refetch(),
+      planProgress.refetch(),
+      canvasCompletion.refetch(),
+      overallStats.refetch(),
+    ]);
+  };
+
+  const isRefetching =
+    funnel.isRefetching ||
+    activity.isRefetching ||
+    statusBreakdown.isRefetching ||
+    planProgress.isRefetching ||
+    canvasCompletion.isRefetching ||
+    overallStats.isRefetching;
+
   return {
     funnel: funnel.data,
     activity: activity.data,
@@ -84,6 +103,8 @@ export function useDashboardData(userId: string | undefined) {
       planProgress.isLoading ||
       canvasCompletion.isLoading ||
       overallStats.isLoading,
+    isRefetching,
+    refetch,
     error:
       funnel.error ||
       activity.error ||

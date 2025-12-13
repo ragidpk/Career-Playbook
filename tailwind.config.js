@@ -46,6 +46,12 @@ export default {
           500: '#EF4444',
           600: '#DC2626',
         },
+        info: {
+          50: '#F5F3FF',
+          100: '#EDE9FE',
+          500: '#8B5CF6',
+          600: '#7C3AED',
+        },
       },
       fontFamily: {
         display: ['Outfit', 'system-ui', 'sans-serif'],

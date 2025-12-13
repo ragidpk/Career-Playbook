@@ -4,13 +4,16 @@ interface StatusPieChartProps {
   data: CompanyStatusBreakdown[];
 }
 
-const statusColors: Record<string, string> = {
-  Researching: 'bg-blue-500',
-  Applied: 'bg-yellow-500',
-  Interviewing: 'bg-purple-500',
-  Offer: 'bg-green-500',
-  Rejected: 'bg-red-500',
+// Design system color tokens with hex values
+const statusColorConfig: Record<string, { bg: string; hex: string }> = {
+  Researching: { bg: 'bg-primary-500', hex: '#2563EB' },
+  Applied: { bg: 'bg-warning-500', hex: '#F59E0B' },
+  Interviewing: { bg: 'bg-info-500', hex: '#8B5CF6' },
+  Offer: { bg: 'bg-success-500', hex: '#22C55E' },
+  Rejected: { bg: 'bg-error-500', hex: '#EF4444' },
 };
+
+const defaultColor = { bg: 'bg-gray-500', hex: '#6B7280' };
 
 export default function StatusPieChart({ data }: StatusPieChartProps) {
   if (!data || data.length === 0) {
@@ -26,8 +29,25 @@ export default function StatusPieChart({ data }: StatusPieChartProps) {
 
   const total = data.reduce((sum, item) => sum + item.count, 0);
 
-  // Simple donut chart using CSS
-  let cumulativePercentage = 0;
+  // Build gradient segments using reduce for deterministic calculation
+  const segments = data.reduce<{ start: number; end: number; color: string }[]>(
+    (acc, item) => {
+      const lastEnd = acc.length > 0 ? acc[acc.length - 1].end : 0;
+      const colorConfig = statusColorConfig[item.status] || defaultColor;
+      acc.push({
+        start: lastEnd,
+        end: lastEnd + item.percentage,
+        color: colorConfig.hex,
+      });
+      return acc;
+    },
+    []
+  );
+
+  // Build conic-gradient string from pre-computed segments
+  const gradientStops = segments
+    .map((seg) => `${seg.color} ${seg.start}% ${seg.end}%`)
+    .join(', ');
 
   return (
     <div className="bg-white rounded-2xl shadow-card p-6">
@@ -39,21 +59,7 @@ export default function StatusPieChart({ data }: StatusPieChartProps) {
           <div
             className="w-full h-full rounded-full"
             style={{
-              background: `conic-gradient(
-                ${data.map((item) => {
-                  const startPercentage = cumulativePercentage;
-                  cumulativePercentage += item.percentage;
-                  const color = statusColors[item.status]?.replace('bg-', '') || 'gray-500';
-                  const colorValue = {
-                    'blue-500': '#3b82f6',
-                    'yellow-500': '#eab308',
-                    'purple-500': '#a855f7',
-                    'green-500': '#22c55e',
-                    'red-500': '#ef4444',
-                  }[color] || '#6b7280';
-                  return `${colorValue} ${startPercentage}% ${cumulativePercentage}%`;
-                }).join(', ')}
-              )`,
+              background: `conic-gradient(${gradientStops})`,
             }}
           >
             {/* Center white circle to create donut effect */}
@@ -69,18 +75,21 @@ export default function StatusPieChart({ data }: StatusPieChartProps) {
 
       {/* Legend */}
       <div className="space-y-2">
-        {data.map((item, index) => (
-          <div key={index} className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${statusColors[item.status] || 'bg-gray-500'}`} />
-              <span className="text-sm text-gray-700">{item.status}</span>
+        {data.map((item, index) => {
+          const colorConfig = statusColorConfig[item.status] || defaultColor;
+          return (
+            <div key={index} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${colorConfig.bg}`} />
+                <span className="text-sm text-gray-700">{item.status}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-900">{item.count}</span>
+                <span className="text-sm text-gray-500">({item.percentage.toFixed(1)}%)</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-900">{item.count}</span>
-              <span className="text-sm text-gray-500">({item.percentage.toFixed(1)}%)</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

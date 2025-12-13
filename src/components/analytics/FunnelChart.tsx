@@ -6,10 +6,10 @@ interface FunnelChartProps {
 
 export default function FunnelChart({ data }: FunnelChartProps) {
   const stages = [
-    { label: 'Researching', value: data.researching, color: 'bg-blue-500' },
-    { label: 'Applied', value: data.applied, color: 'bg-yellow-500' },
-    { label: 'Interviewing', value: data.interviewing, color: 'bg-purple-500' },
-    { label: 'Offer', value: data.offer, color: 'bg-green-500' },
+    { label: 'Researching', value: data.researching, color: 'bg-primary-500' },
+    { label: 'Applied', value: data.applied, color: 'bg-warning-500' },
+    { label: 'Interviewing', value: data.interviewing, color: 'bg-info-500' },
+    { label: 'Offer', value: data.offer, color: 'bg-success-500' },
   ];
 
   // Calculate max value for scaling
@@ -53,7 +53,7 @@ export default function FunnelChart({ data }: FunnelChartProps) {
           <div className="mt-6 pt-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-red-500 rounded-full mr-2" />
+                <div className="w-3 h-3 bg-error-500 rounded-full mr-2" />
                 <span className="text-sm font-medium text-gray-700">Rejected</span>
               </div>
               <span className="text-sm font-semibold text-gray-900">{rejectedCount}</span>

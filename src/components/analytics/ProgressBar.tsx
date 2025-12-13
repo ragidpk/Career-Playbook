@@ -1,7 +1,7 @@
 interface ProgressBarProps {
   title: string;
   percentage: number;
-  color?: 'primary' | 'success' | 'warning' | 'purple';
+  color?: 'primary' | 'success' | 'warning' | 'info';
   subtitle?: string;
   showLabel?: boolean;
 }
@@ -10,14 +10,14 @@ const colorClasses = {
   primary: 'from-primary-400 to-primary-600',
   success: 'from-success-500 to-success-600',
   warning: 'from-warning-500 to-warning-600',
-  purple: 'from-purple-400 to-purple-600',
+  info: 'from-info-500 to-info-600',
 };
 
 const bgClasses = {
   primary: 'bg-primary-100',
   success: 'bg-success-100',
   warning: 'bg-warning-100',
-  purple: 'bg-purple-100',
+  info: 'bg-info-100',
 };
 
 export default function ProgressBar({

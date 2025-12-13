@@ -16,11 +16,11 @@ type DateRange = 'week' | 'month' | 'all';
 
 export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) {
   const [dateRange, setDateRange] = useState<DateRange>('month');
-  const { funnel, activity, statusBreakdown, planProgress, canvasCompletion, overallStats, isLoading, error } =
+  const { funnel, activity, statusBreakdown, planProgress, canvasCompletion, overallStats, isLoading, isRefetching, refetch, error } =
     useDashboardData(userId);
 
   const handleRefresh = () => {
-    window.location.reload();
+    refetch();
   };
 
   if (isLoading) {
@@ -45,51 +45,55 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
   return (
     <div className="space-y-6">
       {/* Header with date range selector */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-display font-bold text-gray-900">Analytics Dashboard</h2>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white rounded-2xl shadow-card px-1 py-1">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-1 bg-white rounded-2xl shadow-card px-1 py-1">
             <button
               onClick={() => setDateRange('week')}
-              className={`px-4 py-2 rounded-pill text-sm font-medium transition-colors ${
+              aria-pressed={dateRange === 'week'}
+              className={`px-3 py-2 sm:px-4 rounded-pill text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
                 dateRange === 'week'
                   ? 'bg-primary-100 text-primary-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
               type="button"
             >
-              This Week
+              Week
             </button>
             <button
               onClick={() => setDateRange('month')}
-              className={`px-4 py-2 rounded-pill text-sm font-medium transition-colors ${
+              aria-pressed={dateRange === 'month'}
+              className={`px-3 py-2 sm:px-4 rounded-pill text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
                 dateRange === 'month'
                   ? 'bg-primary-100 text-primary-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
               type="button"
             >
-              This Month
+              Month
             </button>
             <button
               onClick={() => setDateRange('all')}
-              className={`px-4 py-2 rounded-pill text-sm font-medium transition-colors ${
+              aria-pressed={dateRange === 'all'}
+              className={`px-3 py-2 sm:px-4 rounded-pill text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
                 dateRange === 'all'
                   ? 'bg-primary-100 text-primary-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
               type="button"
             >
-              All Time
+              All
             </button>
           </div>
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl shadow-card text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            disabled={isRefetching}
+            className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-white rounded-2xl shadow-card text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50"
             type="button"
           >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
+            <RefreshCw className={`w-4 h-4 ${isRefetching ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </div>
@@ -133,7 +137,7 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
         <ProgressBar
           title="Career Canvas Completion"
           percentage={canvasCompletion?.completionPercentage || 0}
-          color="purple"
+          color="info"
           subtitle={`${canvasCompletion?.sectionsCompleted || 0} of ${canvasCompletion?.totalSections || 9} sections filled`}
         />
       </div>
