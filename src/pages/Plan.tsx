@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Calendar, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit3, Sparkles, Check } from 'lucide-react';
 import { usePlans } from '../hooks/usePlan';
 import { useAuthStore } from '../store/authStore';
 import PlanBuilder from '../components/plan/PlanBuilder';
@@ -82,21 +82,79 @@ export default function Plan() {
 
         {/* Plans List or Create First Plan */}
         {plans.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              No Plans Yet
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Create your first 90-day plan to start tracking your career goals
-            </p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              <Plus className="w-5 h-5" />
-              Create Your First Plan
-            </button>
+          <div className="max-w-4xl mx-auto">
+            {/* Hero Section */}
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-display font-bold text-gray-900 mb-3">
+                Create Your Career Plan
+              </h2>
+              <p className="text-gray-600 text-lg">
+                Start building your personalized career roadmap
+              </p>
+            </div>
+
+            {/* Options Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Create Manually Card */}
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-white rounded-2xl shadow-card hover:shadow-card-hover p-8 text-left transition-all duration-200 border-2 border-transparent hover:border-primary-200 group"
+              >
+                <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary-200 transition-colors">
+                  <Edit3 className="w-7 h-7 text-primary-600" />
+                </div>
+                <h3 className="text-xl font-display font-semibold text-gray-900 mb-3">
+                  Create Manually
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Start from scratch and build a completely customized career plan tailored to your unique goals and circumstances.
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-primary-500" />
+                    Full control over every detail
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-primary-500" />
+                    AI-generated milestones
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-primary-500" />
+                    Perfect for unique career paths
+                  </li>
+                </ul>
+              </button>
+
+              {/* Use a Template Card */}
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-white rounded-2xl shadow-card hover:shadow-card-hover p-8 text-left transition-all duration-200 border-2 border-transparent hover:border-info-200 group"
+              >
+                <div className="w-14 h-14 bg-info-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-info-200 transition-colors">
+                  <Sparkles className="w-7 h-7 text-info-600" />
+                </div>
+                <h3 className="text-xl font-display font-semibold text-gray-900 mb-3">
+                  Use a Template
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Get started quickly with pre-built templates designed for common career transitions and goals.
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-info-500" />
+                    Quick and easy setup
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-info-500" />
+                    Pre-configured milestones
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-info-500" />
+                    Proven career frameworks
+                  </li>
+                </ul>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
