@@ -7,6 +7,7 @@ import About from './pages/About';
 import Features from './pages/Features';
 import Resources from './pages/Resources';
 import Templates from './pages/Templates';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AuthCallback from './pages/AuthCallback';
@@ -122,6 +123,7 @@ function App() {
             <Route path="/features" element={<Features />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/resources" element={<Resources />} />
+            <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>
