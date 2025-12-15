@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Users, FileText, RefreshCw, UserCheck, Handshake, Target } from 'lucide-react';
+import { Shield, Users, FileText, RefreshCw, UserCheck, Handshake, Target, Settings } from 'lucide-react';
 import { useIsAdmin, useAdminUsers, useAdminStats, useAdminPlans, useAdminMentors, useAdminPartners, useAdminTemplates } from '../hooks/useAdmin';
 import AdminStats from '../components/admin/AdminStats';
 import UserTable from '../components/admin/UserTable';
@@ -7,9 +7,10 @@ import PlanTable from '../components/admin/PlanTable';
 import MentorTable from '../components/admin/MentorTable';
 import PartnerTable from '../components/admin/PartnerTable';
 import TemplateTable from '../components/admin/TemplateTable';
+import SettingsPanel from '../components/admin/SettingsPanel';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
-type TabType = 'overview' | 'users' | 'plans' | 'mentors' | 'partners' | 'templates';
+type TabType = 'overview' | 'users' | 'plans' | 'mentors' | 'partners' | 'templates' | 'settings';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -37,6 +38,7 @@ export default function Admin() {
     { id: 'templates' as TabType, label: 'Templates', icon: Target },
     { id: 'mentors' as TabType, label: 'Mentors', icon: UserCheck },
     { id: 'partners' as TabType, label: 'Accountability Partners', icon: Handshake },
+    { id: 'settings' as TabType, label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -190,6 +192,10 @@ export default function Admin() {
               />
             )}
           </>
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsPanel isSuperAdmin={isSuperAdmin} />
         )}
       </div>
     </div>
