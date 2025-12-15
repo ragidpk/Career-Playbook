@@ -9,6 +9,28 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Career Plan Template types
+export interface CareerPlanTemplate {
+  id: string
+  name: string
+  target_role: string
+  description: string
+  icon: string
+  color: string
+  is_featured: boolean
+  is_active: boolean
+  weeks: TemplateWeek[]
+  created_at: string
+  updated_at: string
+}
+
+export interface TemplateWeek {
+  week: number
+  title: string
+  theme: 'foundation' | 'skill_development' | 'networking' | 'job_search'
+  goals: string[]
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -26,7 +48,7 @@ export interface Database {
           linkedin_url: string | null
           // Career Information
           years_of_experience: string | null
-          current_role: string | null
+          job_title: string | null
           specialization: string | null
           areas_of_expertise: string[] | null
           // Career Goals
@@ -40,6 +62,10 @@ export interface Database {
           // Onboarding
           profile_completed: boolean
           onboarding_completed_at: string | null
+          // Usage Limits
+          resume_analysis_limit: number
+          // Timezone
+          timezone: string | null
           created_at: string
           updated_at: string
         }
@@ -54,7 +80,7 @@ export interface Database {
           current_location?: string | null
           linkedin_url?: string | null
           years_of_experience?: string | null
-          current_role?: string | null
+          job_title?: string | null
           specialization?: string | null
           areas_of_expertise?: string[] | null
           target_role?: string | null
@@ -66,6 +92,8 @@ export interface Database {
           skills?: string[] | null
           profile_completed?: boolean
           onboarding_completed_at?: string | null
+          resume_analysis_limit?: number
+          timezone?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -80,7 +108,7 @@ export interface Database {
           current_location?: string | null
           linkedin_url?: string | null
           years_of_experience?: string | null
-          current_role?: string | null
+          job_title?: string | null
           specialization?: string | null
           areas_of_expertise?: string[] | null
           target_role?: string | null
@@ -92,6 +120,8 @@ export interface Database {
           skills?: string[] | null
           profile_completed?: boolean
           onboarding_completed_at?: string | null
+          resume_analysis_limit?: number
+          timezone?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -100,6 +130,8 @@ export interface Database {
         Row: {
           id: string
           user_id: string
+          name: string
+          target_role: string | null
           section_1_helpers: string | null
           section_2_activities: string | null
           section_3_value: string | null
@@ -110,12 +142,16 @@ export interface Database {
           section_8_sacrifices: string | null
           section_9_outcomes: string | null
           completion_percentage: number
+          linked_plan_id: string | null
+          order_index: number
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
+          name?: string
+          target_role?: string | null
           section_1_helpers?: string | null
           section_2_activities?: string | null
           section_3_value?: string | null
@@ -126,12 +162,16 @@ export interface Database {
           section_8_sacrifices?: string | null
           section_9_outcomes?: string | null
           completion_percentage?: number
+          linked_plan_id?: string | null
+          order_index?: number
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
+          name?: string
+          target_role?: string | null
           section_1_helpers?: string | null
           section_2_activities?: string | null
           section_3_value?: string | null
@@ -142,6 +182,8 @@ export interface Database {
           section_8_sacrifices?: string | null
           section_9_outcomes?: string | null
           completion_percentage?: number
+          linked_plan_id?: string | null
+          order_index?: number
           created_at?: string
           updated_at?: string
         }
@@ -637,7 +679,183 @@ export interface Database {
           updated_at?: string
         }
       }
-      // Add other table types as needed
+      mentorship_sessions: {
+        Row: {
+          id: string
+          plan_id: string | null
+          host_id: string
+          attendee_id: string
+          title: string
+          description: string | null
+          session_type: 'one_time' | 'recurring'
+          status: 'proposed' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
+          proposed_times: Json | null
+          scheduled_start: string | null
+          scheduled_end: string | null
+          duration_minutes: number
+          timezone: string
+          recurrence_rule: 'weekly' | 'biweekly' | null
+          recurrence_end_date: string | null
+          parent_session_id: string | null
+          meeting_provider: 'google_meet' | 'zoom' | 'manual' | null
+          meeting_link: string | null
+          meeting_id: string | null
+          actual_duration_minutes: number | null
+          session_notes: string | null
+          outcomes: Json | null
+          created_at: string
+          updated_at: string
+          confirmed_at: string | null
+          completed_at: string | null
+          cancelled_at: string | null
+          cancellation_reason: string | null
+        }
+        Insert: {
+          id?: string
+          plan_id?: string | null
+          host_id: string
+          attendee_id: string
+          title: string
+          description?: string | null
+          session_type?: 'one_time' | 'recurring'
+          status?: 'proposed' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
+          proposed_times?: Json | null
+          scheduled_start?: string | null
+          scheduled_end?: string | null
+          duration_minutes?: number
+          timezone?: string
+          recurrence_rule?: 'weekly' | 'biweekly' | null
+          recurrence_end_date?: string | null
+          parent_session_id?: string | null
+          meeting_provider?: 'google_meet' | 'zoom' | 'manual' | null
+          meeting_link?: string | null
+          meeting_id?: string | null
+          actual_duration_minutes?: number | null
+          session_notes?: string | null
+          outcomes?: Json | null
+          created_at?: string
+          updated_at?: string
+          confirmed_at?: string | null
+          completed_at?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
+        }
+        Update: {
+          id?: string
+          plan_id?: string | null
+          host_id?: string
+          attendee_id?: string
+          title?: string
+          description?: string | null
+          session_type?: 'one_time' | 'recurring'
+          status?: 'proposed' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
+          proposed_times?: Json | null
+          scheduled_start?: string | null
+          scheduled_end?: string | null
+          duration_minutes?: number
+          timezone?: string
+          recurrence_rule?: 'weekly' | 'biweekly' | null
+          recurrence_end_date?: string | null
+          parent_session_id?: string | null
+          meeting_provider?: 'google_meet' | 'zoom' | 'manual' | null
+          meeting_link?: string | null
+          meeting_id?: string | null
+          actual_duration_minutes?: number | null
+          session_notes?: string | null
+          outcomes?: Json | null
+          created_at?: string
+          updated_at?: string
+          confirmed_at?: string | null
+          completed_at?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
+        }
+      }
+      calendar_connections: {
+        Row: {
+          id: string
+          user_id: string
+          provider: 'google' | 'microsoft' | 'apple'
+          access_token: string | null
+          refresh_token: string | null
+          token_expires_at: string | null
+          calendar_id: string | null
+          calendar_email: string | null
+          is_active: boolean
+          last_sync_at: string | null
+          sync_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: 'google' | 'microsoft' | 'apple'
+          access_token?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          calendar_id?: string | null
+          calendar_email?: string | null
+          is_active?: boolean
+          last_sync_at?: string | null
+          sync_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: 'google' | 'microsoft' | 'apple'
+          access_token?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          calendar_id?: string | null
+          calendar_email?: string | null
+          is_active?: boolean
+          last_sync_at?: string | null
+          sync_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      session_reminders: {
+        Row: {
+          id: string
+          session_id: string
+          user_id: string
+          reminder_type: '24_hours' | '1_hour' | 'custom'
+          reminder_time: string
+          email_sent: boolean
+          email_sent_at: string | null
+          in_app_sent: boolean
+          in_app_sent_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          user_id: string
+          reminder_type: '24_hours' | '1_hour' | 'custom'
+          reminder_time: string
+          email_sent?: boolean
+          email_sent_at?: string | null
+          in_app_sent?: boolean
+          in_app_sent_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          user_id?: string
+          reminder_type?: '24_hours' | '1_hour' | 'custom'
+          reminder_time?: string
+          email_sent?: boolean
+          email_sent_at?: string | null
+          in_app_sent?: boolean
+          in_app_sent_at?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

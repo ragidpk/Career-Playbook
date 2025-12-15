@@ -32,10 +32,19 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
   }
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Analytics error:', error);
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
         <p className="font-medium">Error loading analytics</p>
-        <p className="text-sm mt-1">Please try refreshing the page</p>
+        <p className="text-sm mt-1">{errorMessage}</p>
+        <button
+          onClick={handleRefresh}
+          className="mt-2 text-sm underline hover:no-underline"
+          type="button"
+        >
+          Try again
+        </button>
       </div>
     );
   }

@@ -41,7 +41,35 @@ export async function inviteMentor(mentorEmail: string, personalMessage?: string
     body: { mentorEmail, personalMessage },
   });
 
-  if (error) throw error;
+  // When edge function returns non-2xx, Supabase sets both error AND data
+  // data contains the JSON response body with our error message
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  if (error) {
+    // Try to extract error from FunctionsHttpError context
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const functionsError = error as any;
+
+    // Check if context exists and try to read the response body
+    if (functionsError.context?.body) {
+      try {
+        const reader = functionsError.context.body.getReader();
+        const { value } = await reader.read();
+        const text = new TextDecoder().decode(value);
+        const errorBody = JSON.parse(text);
+        if (errorBody?.error) {
+          throw new Error(errorBody.error);
+        }
+      } catch {
+        // Parsing failed, continue to default error
+      }
+    }
+
+    throw new Error(error.message || 'Failed to send invitation');
+  }
+
   return data;
 }
 
@@ -57,7 +85,10 @@ export async function getInvitations(userId: string): Promise<MentorInvitation[]
     .eq('job_seeker_id', userId)
     .order('invited_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase error loading invitations:', error.code, error.message, error.details);
+    throw new Error(`${error.message} (${error.code})`);
+  }
   return data || [];
 }
 
@@ -71,7 +102,29 @@ export async function acceptInvitation(invitationId: string) {
     body: { invitationId },
   });
 
-  if (error) throw error;
+  if (error) {
+    // FunctionsHttpError contains response context - try to extract actual error
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const functionsError = error as any;
+    if (functionsError.context) {
+      try {
+        const errorBody = await functionsError.context.json();
+        if (errorBody?.error) {
+          throw new Error(errorBody.error);
+        }
+      } catch {
+        // JSON parsing failed, fall through to default error
+      }
+    }
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+    throw new Error(error.message || 'Failed to accept invitation');
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
   return data;
 }
 

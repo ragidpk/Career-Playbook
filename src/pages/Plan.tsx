@@ -1,20 +1,18 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Trash2, Target, ArrowRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, Target, ArrowRight, Calendar, ChevronRight } from 'lucide-react';
 import { usePlans } from '../hooks/usePlan';
 import { useAuthStore } from '../store/authStore';
 import { useCanvas } from '../hooks/useCanvas';
-import PlanBuilder from '../components/plan/PlanBuilder';
-import ProgressTimeline from '../components/plan/ProgressTimeline';
 import { format, addDays } from 'date-fns';
+import NewPlanModal from '../components/plan/NewPlanModal';
 
 export default function Plan() {
   const user = useAuthStore((state) => state.user);
-  const { plans, createPlan, deletePlan, isLoading, isCreating, isDeleting } = usePlans(user?.id);
+  const navigate = useNavigate();
+  const { plans, createPlan, isLoading, isCreating } = usePlans(user?.id);
   const { canvas, isLoading: isCanvasLoading } = useCanvas(user?.id || '');
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-
-  const selectedPlan = plans.find(p => p.id === selectedPlanId);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Check if career canvas has content
   const hasCareerCanvas = canvas && (
@@ -29,40 +27,27 @@ export default function Plan() {
     canvas.section_9_outcomes
   );
 
-  const handleCreatePlanFromCanvas = async () => {
-    if (!hasCareerCanvas) return;
-
-    const startDate = new Date();
-    const endDate = addDays(startDate, 84); // 12 weeks = 84 days
+  const handleCreatePlan = async (title: string, startDate: string, _templateId: string | null) => {
+    const endDate = addDays(new Date(startDate), 84); // 12 weeks = 84 days
 
     try {
       const newPlan = await createPlan({
-        title: 'My 90-Day Career Plan',
-        start_date: format(startDate, 'yyyy-MM-dd'),
+        title,
+        start_date: startDate,
         end_date: format(endDate, 'yyyy-MM-dd'),
       });
 
-      setSelectedPlanId(newPlan.id);
+      setIsModalOpen(false);
+      // Navigate to the new plan detail page
+      navigate(`/plans/${newPlan.id}`);
     } catch (error) {
       console.error('Failed to create plan:', error);
       alert('Failed to create plan. Please try again.');
     }
   };
 
-  const handleDeletePlan = async (planId: string) => {
-    if (!confirm('Are you sure you want to delete this plan? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      await deletePlan(planId);
-      if (selectedPlanId === planId) {
-        setSelectedPlanId(null);
-      }
-    } catch (error) {
-      console.error('Failed to delete plan:', error);
-      alert('Failed to delete plan. Please try again.');
-    }
+  const openNewPlanModal = () => {
+    setIsModalOpen(true);
   };
 
   if (isLoading || isCanvasLoading) {
@@ -162,86 +147,94 @@ export default function Plan() {
                 90-Day Plan with weekly milestones to help you achieve your goals.
               </p>
               <button
-                onClick={handleCreatePlanFromCanvas}
-                disabled={isCreating}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50"
+                onClick={openNewPlanModal}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
               >
-                {isCreating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Creating Plan...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-5 h-5" />
-                    Create My 90-Day Plan
-                  </>
-                )}
+                <Plus className="w-5 h-5" />
+                Create My 90-Day Plan
               </button>
             </div>
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Plan Selector */}
-            <div className="bg-white rounded-2xl shadow-card p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex-1">
-                  <label htmlFor="plan-select" className="block text-sm font-medium text-gray-700 mb-2">
-                    Select a Plan
-                  </label>
-                  <select
-                    id="plan-select"
-                    value={selectedPlanId || ''}
-                    onChange={(e) => setSelectedPlanId(e.target.value)}
-                    className="w-full sm:w-auto px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  >
-                    <option value="">Choose a plan...</option>
-                    {plans.map((plan) => (
-                      <option key={plan.id} value={plan.id}>
-                        {plan.title} ({format(new Date(plan.start_date), 'MMM d, yyyy')} - {format(new Date(plan.end_date), 'MMM d, yyyy')})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  {selectedPlanId && (
-                    <button
-                      onClick={() => handleDeletePlan(selectedPlanId)}
-                      disabled={isDeleting}
-                      className="p-2 text-error-600 hover:bg-error-50 rounded-xl transition-colors disabled:opacity-50"
-                      title="Delete plan"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  )}
-                  <button
-                    onClick={handleCreatePlanFromCanvas}
-                    disabled={isCreating}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50"
-                  >
-                    <Plus className="w-5 h-5" />
-                    New Plan
-                  </button>
-                </div>
+            {/* Header with New Plan Button */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-display font-semibold text-gray-900">Your Plans</h2>
+                <p className="text-sm text-gray-500">{plans.length} plan{plans.length !== 1 ? 's' : ''} created</p>
               </div>
+              <button
+                onClick={openNewPlanModal}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                New Plan
+              </button>
             </div>
 
-            {/* Selected Plan Content */}
-            {selectedPlanId && selectedPlan ? (
-              <div className="space-y-6">
-                {/* Progress Timeline */}
-                <ProgressTimeline milestones={selectedPlan.weekly_milestones} />
+            {/* Plans Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {plans.map((plan) => {
+                const completedMilestones = plan.weekly_milestones.filter(m => m.status === 'completed').length;
+                const totalMilestones = plan.weekly_milestones.length;
+                const progressPercentage = totalMilestones > 0
+                  ? Math.round((completedMilestones / totalMilestones) * 100)
+                  : 0;
 
-                {/* Plan Builder */}
-                <PlanBuilder planId={selectedPlanId} />
-              </div>
-            ) : (
-              <div className="bg-white rounded-2xl shadow-card p-12 text-center">
-                <p className="text-gray-600">Select a plan to view your weekly milestones</p>
-              </div>
-            )}
+                return (
+                  <Link
+                    key={plan.id}
+                    to={`/plans/${plan.id}`}
+                    className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover p-6 transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center group-hover:bg-primary-200 transition-colors">
+                        <Target className="w-5 h-5 text-primary-600" />
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 transition-colors" />
+                    </div>
+
+                    <h3 className="font-display font-semibold text-gray-900 mb-2 line-clamp-1">
+                      {plan.title}
+                    </h3>
+
+                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {format(new Date(plan.start_date), 'MMM d')} - {format(new Date(plan.end_date), 'MMM d, yyyy')}
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500">Progress</span>
+                        <span className="font-semibold text-primary-600">{progressPercentage}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all"
+                          style={{ width: `${progressPercentage}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {completedMilestones}/{totalMilestones} milestones
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
+
+        {/* New Plan Modal */}
+        <NewPlanModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onCreatePlan={handleCreatePlan}
+          isCreating={isCreating}
+        />
       </div>
     </div>
   );

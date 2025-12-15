@@ -135,6 +135,22 @@ export async function reorderMilestones(
   }
 }
 
+export async function updatePlan(
+  planId: string,
+  updates: { title?: string; start_date?: string; end_date?: string }
+): Promise<NinetyDayPlan> {
+  const { data, error } = await supabase
+    .from('ninety_day_plans')
+    // @ts-expect-error - Supabase typing issue
+    .update(updates)
+    .eq('id', planId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as NinetyDayPlan;
+}
+
 export async function deletePlan(planId: string): Promise<void> {
   // Delete milestones first (cascade should handle this, but being explicit)
   const { error: milestonesError } = await supabase

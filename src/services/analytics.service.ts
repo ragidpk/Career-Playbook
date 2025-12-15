@@ -50,7 +50,10 @@ export async function getApplicationFunnel(userId: string): Promise<ApplicationF
     .select('status')
     .eq('user_id', userId);
 
-  if (error) throw error;
+  if (error) {
+    console.error('getApplicationFunnel error:', error.code, error.message);
+    throw new Error(`Failed to load funnel: ${error.message} (${error.code})`);
+  }
 
   const companies = (data || []) as { status: string }[];
 
@@ -70,7 +73,10 @@ export async function getWeeklyActivity(userId: string, weeks: number = 12): Pro
     .eq('user_id', userId)
     .order('date_added', { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error('getWeeklyActivity error:', error.code, error.message);
+    throw new Error(`Failed to load activity: ${error.message} (${error.code})`);
+  }
 
   const companies = (data || []) as { date_added: string }[];
 
@@ -129,7 +135,10 @@ export async function getPlanProgress(userId: string): Promise<PlanProgress> {
     .select('id')
     .eq('user_id', userId);
 
-  if (planError) throw planError;
+  if (planError) {
+    console.error('getPlanProgress error:', planError.code, planError.message);
+    throw new Error(`Failed to load plans: ${planError.message} (${planError.code})`);
+  }
 
   if (!plans || plans.length === 0) {
     return {
@@ -148,7 +157,10 @@ export async function getPlanProgress(userId: string): Promise<PlanProgress> {
     .select('status')
     .in('plan_id', planIds);
 
-  if (milestonesError) throw milestonesError;
+  if (milestonesError) {
+    console.error('getMilestones error:', milestonesError.code, milestonesError.message);
+    throw new Error(`Failed to load milestones: ${milestonesError.message} (${milestonesError.code})`);
+  }
 
   const allMilestones = milestones || [];
   const completed = allMilestones.filter((m: WeeklyMilestone) => m.status === 'completed').length;
@@ -171,7 +183,10 @@ export async function getCanvasCompletion(userId: string): Promise<CanvasComplet
     .eq('user_id', userId)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    console.error('getCanvasCompletion error:', error.code, error.message);
+    throw new Error(`Failed to load canvas: ${error.message} (${error.code})`);
+  }
 
   if (!data) {
     return {

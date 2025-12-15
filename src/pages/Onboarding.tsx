@@ -23,7 +23,7 @@ interface FormData {
   linkedin_url: string;
   // Step 2: Career Info
   years_of_experience: string;
-  current_role: string;
+  job_title: string;
   specialization: string;
   education_level: string;
   // Step 3: Career Goals
@@ -42,7 +42,7 @@ const initialFormData: FormData = {
   current_location: '',
   linkedin_url: '',
   years_of_experience: '',
-  current_role: '',
+  job_title: '',
   specialization: '',
   education_level: '',
   target_role: '',
@@ -116,7 +116,7 @@ export default function Onboarding() {
       case 1:
         return !!formData.full_name.trim();
       case 2:
-        return !!formData.current_role.trim();
+        return !!formData.job_title.trim();
       case 3:
         return true; // Optional fields
       default:
@@ -147,7 +147,7 @@ export default function Onboarding() {
         current_location: formData.current_location || null,
         linkedin_url: formData.linkedin_url || null,
         years_of_experience: formData.years_of_experience || null,
-        current_role: formData.current_role || null,
+        job_title: formData.job_title || null,
         specialization: formData.specialization || null,
         education_level: (formData.education_level as ProfileUpdate['education_level']) || null,
         target_role: formData.target_role || null,
@@ -288,8 +288,8 @@ export default function Onboarding() {
                 </label>
                 <input
                   type="text"
-                  value={formData.current_role}
-                  onChange={(e) => handleChange('current_role', e.target.value)}
+                  value={formData.job_title}
+                  onChange={(e) => handleChange('job_title', e.target.value)}
                   placeholder="e.g., Software Engineer"
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 />

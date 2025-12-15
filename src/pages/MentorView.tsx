@@ -2,17 +2,22 @@
 // Mentor dashboard showing mentee's Canvas and Plan in read-only mode
 
 import { useState, useEffect } from 'react';
+import { Calendar, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useCanvas } from '../hooks/useCanvas';
 import { usePlan } from '../hooks/usePlan';
+import { useSessions, useCreateSession } from '../hooks/useSession';
 import { getMentees } from '../services/mentor.service';
 import type { Mentee } from '../services/mentor.service';
+import type { CreateSessionInput } from '../types/session.types';
 import MenteeSelector from '../components/mentor/MenteeSelector';
 import ReadOnlyOverlay from '../components/mentor/ReadOnlyOverlay';
 import Card from '../components/shared/Card';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import CanvasSection from '../components/canvas/CanvasSection';
 import CanvasProgress from '../components/canvas/CanvasProgress';
+import SessionCard from '../components/session/SessionCard';
+import ScheduleSessionModal from '../components/session/ScheduleSessionModal';
 
 const CANVAS_SECTIONS = [
   { key: 'section_1_helpers', label: 'Who do you help?' },
@@ -31,10 +36,14 @@ export default function MentorView() {
   const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null);
   const [mentees, setMentees] = useState<Mentee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'canvas' | 'plan'>('canvas');
+  const [activeTab, setActiveTab] = useState<'canvas' | 'plan' | 'sessions'>('canvas');
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const { canvas, isLoading: canvasLoading } = useCanvas(selectedMenteeId || '');
   const { plan, milestones, isLoading: planLoading } = usePlan(selectedMenteeId || '');
+  const { data: sessions, isLoading: sessionsLoading } = useSessions(user?.id);
+  // Only enable createSession when user is authenticated
+  const createSession = useCreateSession(user?.id ?? '');
 
   useEffect(() => {
     loadMentees();
@@ -60,6 +69,22 @@ export default function MentorView() {
 
   const selectedMentee = mentees.find((m) => m.job_seeker_id === selectedMenteeId);
   const menteeName = selectedMentee?.profiles.full_name || selectedMentee?.profiles.email;
+
+  // Filter sessions for selected mentee
+  const menteeSessions = sessions?.filter(
+    (s) => s.attendee_id === selectedMenteeId || s.host_id === selectedMenteeId
+  ) || [];
+
+  const handleCreateSession = async (input: CreateSessionInput) => {
+    if (!user?.id) {
+      console.error('Cannot create session: user not authenticated');
+      return;
+    }
+    await createSession.mutateAsync(input);
+  };
+
+  // Disable schedule button if user is not authenticated
+  const canSchedule = Boolean(user?.id && selectedMenteeId);
 
   if (loading) {
     return (
@@ -127,6 +152,18 @@ export default function MentorView() {
                   }`}
                 >
                   90-Day Plan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('sessions')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                    activeTab === 'sessions'
+                      ? 'border-primary-500 text-primary-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  Sessions
                 </button>
               </nav>
             </div>
@@ -229,8 +266,81 @@ export default function MentorView() {
               )}
             </>
           )}
+
+          {/* Sessions Tab */}
+          {activeTab === 'sessions' && (
+            <>
+              {/* Header with Schedule Button */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Sessions with {menteeName}</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Schedule and manage mentorship sessions
+                  </p>
+                </div>
+                {canSchedule && (
+                  <button
+                    onClick={() => setShowScheduleModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Schedule Session
+                  </button>
+                )}
+              </div>
+
+              {sessionsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <LoadingSpinner />
+                </div>
+              ) : menteeSessions.length > 0 ? (
+                <div className="space-y-4">
+                  {menteeSessions.map((session) => (
+                    <SessionCard
+                      key={session.id}
+                      session={session}
+                      currentUserId={user?.id || ''}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <div className="text-center py-12">
+                    <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No sessions yet</h3>
+                    <p className="text-gray-500 mb-4">
+                      Schedule a session with {menteeName} to get started.
+                    </p>
+                    {canSchedule && (
+                      <button
+                        onClick={() => setShowScheduleModal(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Schedule First Session
+                      </button>
+                    )}
+                  </div>
+                </Card>
+              )}
+            </>
+          )}
         </div>
       </div>
+
+      {/* Schedule Session Modal */}
+      {selectedMenteeId && menteeName && (
+        <ScheduleSessionModal
+          isOpen={showScheduleModal}
+          onClose={() => setShowScheduleModal(false)}
+          onSubmit={handleCreateSession}
+          attendeeId={selectedMenteeId}
+          attendeeName={menteeName}
+          planId={plan?.id}
+          planTitle={plan?.title}
+          isLoading={createSession.isPending}
+        />
+      )}
     </div>
   );
 }

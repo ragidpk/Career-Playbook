@@ -140,20 +140,32 @@ export async function getResumeDownloadUrl(filePath: string, expiresIn: number =
 
 export async function checkUsageLimit(userId: string) {
   const currentMonth = new Date().toISOString().slice(0, 7); // Format: YYYY-MM
-  const { data } = await supabase
-    .from('ai_usage_tracking')
-    .select('usage_count')
-    .eq('user_id', userId)
-    .eq('feature_type', 'resume_analysis')
-    .eq('usage_month', currentMonth)
-    .maybeSingle();
+  const DEFAULT_LIMIT = 2;
 
-  const usageCount = (data as AIUsageRow | null)?.usage_count || 0;
-  const remaining = 2 - usageCount;
+  // Fetch user's custom limit from profile and current usage in parallel
+  const [profileResult, usageResult] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('resume_analysis_limit')
+      .eq('id', userId)
+      .maybeSingle(),
+    supabase
+      .from('ai_usage_tracking')
+      .select('usage_count')
+      .eq('user_id', userId)
+      .eq('feature_type', 'resume_analysis')
+      .eq('usage_month', currentMonth)
+      .maybeSingle()
+  ]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userLimit = (profileResult.data as any)?.resume_analysis_limit ?? DEFAULT_LIMIT;
+  const usageCount = (usageResult.data as AIUsageRow | null)?.usage_count || 0;
+  const remaining = userLimit - usageCount;
 
   return {
     remaining: Math.max(0, remaining),
-    limit: 2,
+    limit: userLimit,
     usageCount
   };
 }

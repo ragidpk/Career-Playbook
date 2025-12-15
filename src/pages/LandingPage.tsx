@@ -104,6 +104,12 @@ export default function LandingPage() {
                 Features
               </Link>
               <Link
+                to="/templates"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-smooth"
+              >
+                Templates
+              </Link>
+              <Link
                 to="/resources"
                 className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-smooth"
               >

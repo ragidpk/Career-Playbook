@@ -1,7 +1,7 @@
 // Mentors Page
 // Manage mentor invitations and access
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getInvitations } from '../services/mentor.service';
 import type { MentorInvitation } from '../services/mentor.service';
@@ -17,29 +17,48 @@ export default function Mentors() {
   const { showToast } = useToast();
   const [invitations, setInvitations] = useState<MentorInvitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const loadedRef = useRef(false);
 
-  useEffect(() => {
-    loadInvitations();
-  }, [user]);
-
-  const loadInvitations = async () => {
-    if (!user) return;
+  const loadInvitations = useCallback(async (showErrorToast = false) => {
+    if (!user?.id) return;
 
     try {
+      setError(null);
       const data = await getInvitations(user.id);
       setInvitations(data);
-    } catch (error) {
-      console.error('Failed to load invitations:', error);
-      showToast('Failed to load invitations', 'error');
+      loadedRef.current = true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load invitations';
+      console.error('Failed to load invitations:', err);
+      setError(errorMessage);
+      if (showErrorToast) {
+        showToast('Failed to load invitations', 'error');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, showToast]);
+
+  useEffect(() => {
+    if (user?.id && !loadedRef.current) {
+      loadInvitations();
+    } else if (!user) {
+      setLoading(false);
+    }
+  }, [user?.id, loadInvitations]);
 
   const handleInviteSuccess = () => {
     showToast('Invitation sent successfully!', 'success');
-    loadInvitations();
+    loadedRef.current = false;
+    loadInvitations(true);
+  };
+
+  const handleRetry = () => {
+    setLoading(true);
+    loadedRef.current = false;
+    loadInvitations(true);
   };
 
   if (loading) {
@@ -97,7 +116,18 @@ export default function Mentors() {
         {/* Invitations List */}
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Invited Mentors</h2>
-          <MentorList invitations={invitations} onUpdate={loadInvitations} />
+          {error ? (
+            <Card className="bg-red-50 border border-red-200">
+              <div className="text-center py-4">
+                <p className="text-red-700 mb-2">Error: {error}</p>
+                <Button variant="secondary" onClick={handleRetry}>
+                  Retry
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <MentorList invitations={invitations} onUpdate={() => { loadedRef.current = false; loadInvitations(true); }} />
+          )}
         </div>
 
         {/* Invite Modal */}

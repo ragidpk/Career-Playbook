@@ -29,6 +29,7 @@ const navItems = [
   { path: '/crm', label: 'Job Hunt CRM', icon: Building2 },
   { path: '/interviews', label: 'Interviews', icon: Calendar },
   { path: '/mentors', label: 'Mentors', icon: Users },
+  { path: '/sessions', label: 'Sessions', icon: Calendar },
 ];
 
 export default function Layout() {

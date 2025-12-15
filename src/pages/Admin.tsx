@@ -1,30 +1,42 @@
 import { useState } from 'react';
-import { Shield, Users, FileText, RefreshCw } from 'lucide-react';
-import { useIsAdmin, useAdminUsers, useAdminStats, useAdminPlans } from '../hooks/useAdmin';
+import { Shield, Users, FileText, RefreshCw, UserCheck, Handshake, Target } from 'lucide-react';
+import { useIsAdmin, useAdminUsers, useAdminStats, useAdminPlans, useAdminMentors, useAdminPartners, useAdminTemplates } from '../hooks/useAdmin';
 import AdminStats from '../components/admin/AdminStats';
 import UserTable from '../components/admin/UserTable';
 import PlanTable from '../components/admin/PlanTable';
+import MentorTable from '../components/admin/MentorTable';
+import PartnerTable from '../components/admin/PartnerTable';
+import TemplateTable from '../components/admin/TemplateTable';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
-type TabType = 'overview' | 'users' | 'plans';
+type TabType = 'overview' | 'users' | 'plans' | 'mentors' | 'partners' | 'templates';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const { isSuperAdmin } = useIsAdmin();
   const { stats, isLoading: statsLoading, error: statsError, refresh: refreshStats } = useAdminStats();
-  const { users, isLoading: usersLoading, error: usersError, refresh: refreshUsers, changeRole } = useAdminUsers();
+  const { users, isLoading: usersLoading, error: usersError, refresh: refreshUsers, changeRole, changeResumeLimit, editUser, removeUser } = useAdminUsers();
   const { plans, isLoading: plansLoading, error: plansError, refresh: refreshPlans } = useAdminPlans();
+  const { mentors, invitations, isLoading: mentorsLoading, error: mentorsError, refresh: refreshMentors } = useAdminMentors();
+  const { partners, isLoading: partnersLoading, error: partnersError, refresh: refreshPartners } = useAdminPartners();
+  const { templates, isLoading: templatesLoading, error: templatesError, refresh: refreshTemplates, create: createTemplate, update: updateTemplate, remove: removeTemplate, duplicate: duplicateTemplate } = useAdminTemplates();
 
   const handleRefresh = () => {
     refreshStats();
     refreshUsers();
     refreshPlans();
+    refreshMentors();
+    refreshPartners();
+    refreshTemplates();
   };
 
   const tabs = [
     { id: 'overview' as TabType, label: 'Overview', icon: Shield },
     { id: 'users' as TabType, label: 'Users', icon: Users },
     { id: 'plans' as TabType, label: 'Plans', icon: FileText },
+    { id: 'templates' as TabType, label: 'Templates', icon: Target },
+    { id: 'mentors' as TabType, label: 'Mentors', icon: UserCheck },
+    { id: 'partners' as TabType, label: 'Accountability Partners', icon: Handshake },
   ];
 
   return (
@@ -51,12 +63,12 @@ export default function Admin() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+        <nav className="-mb-px flex space-x-8 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -101,6 +113,9 @@ export default function Admin() {
               <UserTable
                 users={users}
                 onRoleChange={changeRole}
+                onLimitChange={changeResumeLimit}
+                onEditUser={editUser}
+                onDeleteUser={removeUser}
                 isSuperAdmin={isSuperAdmin}
               />
             )}
@@ -119,6 +134,60 @@ export default function Admin() {
               </div>
             ) : (
               <PlanTable plans={plans} />
+            )}
+          </>
+        )}
+
+        {activeTab === 'mentors' && (
+          <>
+            {mentorsLoading ? (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner />
+              </div>
+            ) : mentorsError ? (
+              <div className="bg-red-50 text-red-700 p-4 rounded-lg">
+                Error loading mentors: {mentorsError}
+              </div>
+            ) : (
+              <MentorTable mentors={mentors} invitations={invitations} />
+            )}
+          </>
+        )}
+
+        {activeTab === 'partners' && (
+          <>
+            {partnersLoading ? (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner />
+              </div>
+            ) : partnersError ? (
+              <div className="bg-red-50 text-red-700 p-4 rounded-lg">
+                Error loading partners: {partnersError}
+              </div>
+            ) : (
+              <PartnerTable partners={partners} />
+            )}
+          </>
+        )}
+
+        {activeTab === 'templates' && (
+          <>
+            {templatesLoading ? (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner />
+              </div>
+            ) : templatesError ? (
+              <div className="bg-red-50 text-red-700 p-4 rounded-lg">
+                Error loading templates: {templatesError}
+              </div>
+            ) : (
+              <TemplateTable
+                templates={templates}
+                onCreate={createTemplate}
+                onUpdate={updateTemplate}
+                onDelete={removeTemplate}
+                onDuplicate={duplicateTemplate}
+              />
             )}
           </>
         )}

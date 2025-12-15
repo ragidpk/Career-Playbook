@@ -33,7 +33,7 @@ export default function Settings() {
         current_location: profile.current_location,
         linkedin_url: profile.linkedin_url,
         years_of_experience: profile.years_of_experience,
-        current_role: profile.current_role,
+        job_title: profile.job_title,
         specialization: profile.specialization,
         education_level: profile.education_level,
         target_role: profile.target_role,
@@ -249,12 +249,12 @@ export default function Settings() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={formData.current_role || ''}
-                            onChange={(e) => handleChange('current_role', e.target.value)}
+                            value={formData.job_title || ''}
+                            onChange={(e) => handleChange('job_title', e.target.value)}
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                           />
                         ) : (
-                          <p className="text-gray-900">{profile?.current_role || 'Not set'}</p>
+                          <p className="text-gray-900">{profile?.job_title || 'Not set'}</p>
                         )}
                       </div>
                       <div>

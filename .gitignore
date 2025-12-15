@@ -32,3 +32,12 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# Migration scripts (may contain secrets)
+scripts/*.cjs
+scripts/*.js
+
+# PowerShell deploy scripts (may contain secrets)
+deploy-*.ps1
+check-*.ps1
+*.ps1

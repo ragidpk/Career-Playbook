@@ -18,6 +18,7 @@ export interface UserWithStats {
   resume_count: number;
   company_count: number;
   canvas_count: number;
+  resume_analysis_limit: number;
 }
 
 export interface AdminStats {
@@ -89,6 +90,7 @@ interface AdminUserStatsRow {
   resume_count: number;
   company_count: number;
   canvas_count: number;
+  resume_analysis_limit: number | null;
 }
 
 // Get all users with stats - OPTIMIZED using admin_user_stats view
@@ -122,6 +124,7 @@ export async function getAllUsers(): Promise<UserWithStats[]> {
     resume_count: user.resume_count || 0,
     company_count: user.company_count || 0,
     canvas_count: user.canvas_count || 0,
+    resume_analysis_limit: user.resume_analysis_limit ?? 2,
   }));
 }
 
@@ -158,6 +161,7 @@ async function getAllUsersFallback(): Promise<UserWithStats[]> {
         resume_count: resumes.count || 0,
         company_count: companies.count || 0,
         canvas_count: canvas.count || 0,
+        resume_analysis_limit: user.resume_analysis_limit ?? 2,
       };
     })
   );
@@ -339,6 +343,22 @@ async function getAllPlansFallback(): Promise<PlanWithUser[]> {
   return plansWithUsers;
 }
 
+// Update user's resume analysis limit (admin only)
+export async function updateUserResumeLimit(userId: string, limit: number): Promise<void> {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    throw new Error('Only admins can change user limits');
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    // @ts-expect-error - Supabase typing issue with profile updates
+    .update({ resume_analysis_limit: limit })
+    .eq('id', userId);
+
+  if (error) throw error;
+}
+
 // Update user role (super admin only)
 export async function updateUserRole(userId: string, role: UserRole): Promise<void> {
   const isSuperAdmin = await checkIsSuperAdmin();
@@ -394,5 +414,342 @@ export async function getUserDetails(userId: string): Promise<UserWithStats | nu
     resume_count: resumes.count || 0,
     company_count: companies.count || 0,
     canvas_count: canvas.count || 0,
+    resume_analysis_limit: profile.resume_analysis_limit ?? 2,
   };
+}
+
+// User edit data interface
+export interface UserEditData {
+  full_name?: string | null;
+  email?: string;
+  role?: UserRole;
+  resume_analysis_limit?: number;
+}
+
+// Update user details (super admin only)
+export async function updateUser(userId: string, data: UserEditData): Promise<void> {
+  const isSuperAdmin = await checkIsSuperAdmin();
+  if (!isSuperAdmin) {
+    throw new Error('Only super admins can edit users');
+  }
+
+  // Get current user to prevent self-modification of role
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.id === userId && data.role) {
+    throw new Error('Cannot change your own role');
+  }
+
+  const updateData: Record<string, unknown> = { ...data };
+
+  // Set is_admin based on role if role is being changed
+  if (data.role) {
+    updateData.is_admin = data.role === 'admin' || data.role === 'super_admin';
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    // @ts-expect-error - Supabase typing issue with profile updates
+    .update(updateData)
+    .eq('id', userId);
+
+  if (error) throw error;
+}
+
+// Delete user and all their data (super admin only)
+export async function deleteUser(userId: string): Promise<void> {
+  const isSuperAdmin = await checkIsSuperAdmin();
+  if (!isSuperAdmin) {
+    throw new Error('Only super admins can delete users');
+  }
+
+  // Get current user to prevent self-deletion
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.id === userId) {
+    throw new Error('Cannot delete your own account');
+  }
+
+  // Get user's email for mentor_invitations cleanup
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', userId)
+    .single();
+
+  const userEmail = (userProfile as { email: string } | null)?.email;
+
+  // Get user's plan IDs for milestone cleanup
+  const { data: userPlans } = await supabase
+    .from('ninety_day_plans')
+    .select('id')
+    .eq('user_id', userId);
+
+  const planIds = ((userPlans || []) as { id: string }[]).map((p) => p.id);
+
+  // Delete milestones for user's plans (if any plans exist)
+  if (planIds.length > 0) {
+    try {
+      await supabase.from('weekly_milestones').delete().in('plan_id', planIds);
+    } catch {
+      // Continue even if delete fails
+    }
+  }
+
+  // Delete user's data from tables (order matters for foreign keys)
+  const directDeletes = [
+    supabase.from('ninety_day_plans').delete().eq('user_id', userId),
+    supabase.from('resume_analyses').delete().eq('user_id', userId),
+    supabase.from('companies').delete().eq('user_id', userId),
+    supabase.from('career_canvas').delete().eq('user_id', userId),
+    supabase.from('ai_usage_tracking').delete().eq('user_id', userId),
+    supabase.from('mentor_invitations').delete().eq('job_seeker_id', userId),
+    supabase.from('mentorship_sessions').delete().eq('host_id', userId),
+    supabase.from('mentorship_sessions').delete().eq('attendee_id', userId),
+    supabase.from('calendar_connections').delete().eq('user_id', userId),
+    supabase.from('session_reminders').delete().eq('user_id', userId),
+  ];
+
+  // Execute direct delete operations
+  for (const op of directDeletes) {
+    try {
+      await op;
+    } catch {
+      // Continue even if some deletes fail (table might not exist or be empty)
+    }
+  }
+
+  // Delete mentor_invitations where this user was invited as mentor (by email)
+  if (userEmail) {
+    try {
+      await supabase.from('mentor_invitations').delete().eq('mentor_email', userEmail);
+    } catch {
+      // Continue even if delete fails
+    }
+  }
+
+  // Delete the profile
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', userId);
+
+  if (profileError) throw profileError;
+
+  // Note: The auth.users entry should be deleted via Supabase Admin API or trigger
+  // For now, the profile is deleted which effectively disables the account
+}
+
+// ============ MENTOR & ACCOUNTABILITY PARTNER FUNCTIONS ============
+
+export interface MentorWithMentees {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: UserRole;
+  created_at: string;
+  mentees: {
+    id: string;
+    email: string;
+    full_name: string | null;
+    status: string;
+    connected_at: string;
+  }[];
+}
+
+export interface MentorInvitationAdmin {
+  id: string;
+  job_seeker_id: string;
+  job_seeker_email: string;
+  job_seeker_name: string | null;
+  mentor_email: string;
+  mentor_id: string | null;
+  mentor_name: string | null;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+}
+
+// Get all mentors with their mentees
+export async function getAllMentors(): Promise<MentorWithMentees[]> {
+  // Get all users with mentor role
+  const { data: mentorsData, error: mentorError } = await supabase
+    .from('profiles')
+    .select('id, email, full_name, role, created_at')
+    .eq('role', 'mentor')
+    .order('created_at', { ascending: false });
+
+  if (mentorError) throw mentorError;
+
+  const mentors = (mentorsData || []) as Array<{
+    id: string;
+    email: string;
+    full_name: string | null;
+    role: string;
+    created_at: string;
+  }>;
+
+  // Get mentor access records to find mentees
+  const { data: accessRecords, error: accessError } = await supabase
+    .from('mentor_access')
+    .select('*');
+
+  if (accessError && accessError.code !== '42P01') {
+    // Ignore if table doesn't exist
+    console.warn('mentor_access table error:', accessError);
+  }
+
+  // Get job seeker profiles for mentees
+  const jobSeekerIds = [...new Set((accessRecords || []).map((r: any) => r.job_seeker_id))];
+  const { data: jobSeekerProfiles } = await supabase
+    .from('profiles')
+    .select('id, email, full_name')
+    .in('id', jobSeekerIds.length > 0 ? jobSeekerIds : ['none']);
+
+  const jobSeekerMap = new Map(
+    (jobSeekerProfiles || []).map((p: any) => [p.id, p])
+  );
+
+  // Map mentors with their mentees
+  const mentorsWithMentees: MentorWithMentees[] = mentors.map((mentor) => {
+    const mentorAccess = (accessRecords || []).filter(
+      (record: any) => record.mentor_id === mentor.id
+    );
+
+    const mentees = mentorAccess.map((access: any) => {
+      const profile = jobSeekerMap.get(access.job_seeker_id);
+      return {
+        id: access.job_seeker_id,
+        email: profile?.email || 'Unknown',
+        full_name: profile?.full_name || null,
+        status: 'connected',
+        connected_at: access.created_at,
+      };
+    });
+
+    return {
+      id: mentor.id,
+      email: mentor.email,
+      full_name: mentor.full_name,
+      role: mentor.role as UserRole,
+      created_at: mentor.created_at,
+      mentees,
+    };
+  });
+
+  return mentorsWithMentees;
+}
+
+// Get all mentor invitations for admin view
+export async function getAllMentorInvitations(): Promise<MentorInvitationAdmin[]> {
+  const { data, error } = await supabase
+    .from('mentor_invitations')
+    .select(`
+      id,
+      job_seeker_id,
+      mentor_email,
+      status,
+      created_at,
+      profiles!mentor_invitations_job_seeker_id_fkey (
+        email,
+        full_name
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Get mentor profiles for accepted invitations
+  const mentorEmails = [...new Set((data || []).map((inv: any) => inv.mentor_email))];
+  const { data: mentorProfiles } = await supabase
+    .from('profiles')
+    .select('id, email, full_name')
+    .in('email', mentorEmails);
+
+  const mentorMap = new Map(
+    (mentorProfiles || []).map((p: any) => [p.email, { id: p.id, full_name: p.full_name }])
+  );
+
+  return (data || []).map((inv: any) => {
+    const mentorInfo = mentorMap.get(inv.mentor_email);
+    return {
+      id: inv.id,
+      job_seeker_id: inv.job_seeker_id,
+      job_seeker_email: inv.profiles?.email || 'Unknown',
+      job_seeker_name: inv.profiles?.full_name || null,
+      mentor_email: inv.mentor_email,
+      mentor_id: mentorInfo?.id || null,
+      mentor_name: mentorInfo?.full_name || null,
+      status: inv.status,
+      created_at: inv.created_at,
+    };
+  });
+}
+
+// Get accountability partners (users who are mentoring others)
+export async function getAccountabilityPartners(): Promise<MentorWithMentees[]> {
+  // Get all mentor access records grouped by mentor
+  const { data: accessRecords, error: accessError } = await supabase
+    .from('mentor_access')
+    .select(`
+      mentor_id,
+      job_seeker_id,
+      created_at,
+      permission_level
+    `);
+
+  if (accessError) {
+    if (accessError.code === '42P01') {
+      return []; // Table doesn't exist
+    }
+    throw accessError;
+  }
+
+  // Get unique mentor IDs
+  const mentorIds = [...new Set((accessRecords || []).map((r: any) => r.mentor_id))];
+
+  if (mentorIds.length === 0) return [];
+
+  // Get mentor profiles
+  const { data: mentorProfiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, email, full_name, role, created_at')
+    .in('id', mentorIds);
+
+  if (profileError) throw profileError;
+
+  // Get all job seeker profiles for the mentees
+  const jobSeekerIds = [...new Set((accessRecords || []).map((r: any) => r.job_seeker_id))];
+  const { data: jobSeekerProfiles } = await supabase
+    .from('profiles')
+    .select('id, email, full_name')
+    .in('id', jobSeekerIds);
+
+  const jobSeekerMap = new Map(
+    (jobSeekerProfiles || []).map((p: any) => [p.id, p])
+  );
+
+  // Build the partners list
+  return (mentorProfiles || []).map((mentor: any) => {
+    const menteeRecords = (accessRecords || []).filter(
+      (r: any) => r.mentor_id === mentor.id
+    );
+
+    const mentees = menteeRecords.map((record: any) => {
+      const profile = jobSeekerMap.get(record.job_seeker_id);
+      return {
+        id: record.job_seeker_id,
+        email: profile?.email || 'Unknown',
+        full_name: profile?.full_name || null,
+        status: 'active',
+        connected_at: record.created_at,
+      };
+    });
+
+    return {
+      id: mentor.id,
+      email: mentor.email,
+      full_name: mentor.full_name,
+      role: mentor.role as UserRole,
+      created_at: mentor.created_at,
+      mentees,
+    };
+  });
 }
