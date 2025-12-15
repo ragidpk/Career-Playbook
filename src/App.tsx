@@ -8,6 +8,7 @@ import Features from './pages/Features';
 import Resources from './pages/Resources';
 import Templates from './pages/Templates';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AuthCallback from './pages/AuthCallback';
@@ -124,6 +125,7 @@ function App() {
             <Route path="/templates" element={<Templates />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
+            <Route path="/terms_of_service" element={<TermsOfService />} />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>
