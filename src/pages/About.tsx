@@ -88,11 +88,15 @@ export default function About() {
 
             {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-8">
-              {['About', 'Features', 'Resources', 'Pricing', 'Contact'].map(
+              {['About', 'Features', 'Templates', 'Resources', 'Pricing', 'Contact'].map(
                 (item) => (
                   <Link
                     key={item}
-                    to={item === 'About' ? '/about' : `/#${item.toLowerCase()}`}
+                    to={
+                      ['About', 'Features', 'Templates', 'Resources'].includes(item)
+                        ? `/${item.toLowerCase()}`
+                        : `/#${item.toLowerCase()}`
+                    }
                     className={`text-sm font-medium transition-smooth ${
                       item === 'About'
                         ? 'text-primary-600'
