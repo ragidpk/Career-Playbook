@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { supabase } from '../services/supabase';
 import Button from '../components/shared/Button';
 import { useToast } from '../components/shared/Toast';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 const resetPasswordSchema = z.object({
   password: z
@@ -26,7 +27,69 @@ export default function ResetPassword() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(true);
   const [linkError, setLinkError] = useState<string | null>(null);
+
+  // Process the recovery token from URL hash on mount
+  useEffect(() => {
+    const processRecoveryToken = async () => {
+      const hash = window.location.hash;
+
+      // Check for error in hash
+      if (hash.includes('error=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const errorCode = params.get('error_code');
+
+        if (errorCode === 'otp_expired') {
+          setLinkError('This password reset link has expired. Please request a new one.');
+        } else {
+          setLinkError(params.get('error_description') || 'Invalid reset link.');
+        }
+        setVerifying(false);
+        return;
+      }
+
+      // Check if we have a recovery token
+      if (hash.includes('access_token') && hash.includes('type=recovery')) {
+        try {
+          // Supabase client automatically processes the hash and sets up the session
+          const { data, error } = await supabase.auth.getSession();
+
+          if (error) {
+            setLinkError('Failed to verify reset link. Please request a new one.');
+          } else if (!data.session) {
+            setLinkError('Invalid or expired reset link. Please request a new one.');
+          }
+          // Clear the hash from URL for cleaner display
+          window.history.replaceState(null, '', window.location.pathname);
+        } catch {
+          setLinkError('Failed to process reset link. Please try again.');
+        }
+      } else {
+        // No token in URL, check if we already have a valid session
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          setLinkError('No valid reset link found. Please request a new password reset.');
+        }
+      }
+
+      setVerifying(false);
+    };
+
+    processRecoveryToken();
+  }, []);
+
+  // Listen for auth state changes (helps with PKCE flow)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setVerifying(false);
+        setLinkError(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const {
     register,
@@ -68,6 +131,18 @@ export default function ResetPassword() {
       setLoading(false);
     }
   };
+
+  // Show loading while verifying token
+  if (verifying) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="mt-4 text-gray-600">Verifying reset link...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">

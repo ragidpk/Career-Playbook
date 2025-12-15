@@ -48,15 +48,37 @@ const queryClient = new QueryClient({
   },
 });
 
-// Handle recovery tokens that land on the root URL
+// Handle recovery tokens and auth errors that land on the root URL
 function AuthRedirectHandler() {
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // Check if we have a recovery token in the hash
+    if (location.pathname !== '/') return;
+
     const hash = window.location.hash;
-    if (hash && hash.includes('type=recovery') && location.pathname === '/') {
+    if (!hash) return;
+
+    // Check for auth errors in hash (e.g., otp_expired)
+    if (hash.includes('error=')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const errorCode = params.get('error_code');
+      const errorDescription = params.get('error_description');
+
+      // Clear the hash from URL
+      window.history.replaceState(null, '', window.location.pathname);
+
+      // Redirect to forgot-password with error info
+      if (errorCode === 'otp_expired') {
+        navigate('/forgot-password?error=expired', { replace: true });
+      } else {
+        navigate(`/login?error=${encodeURIComponent(errorDescription || 'Authentication failed')}`, { replace: true });
+      }
+      return;
+    }
+
+    // Check if we have a recovery token in the hash
+    if (hash.includes('type=recovery')) {
       // Redirect to reset password page with the hash preserved
       navigate('/auth/reset-password' + hash, { replace: true });
     }

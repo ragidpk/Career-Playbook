@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { resetPasswordSchema } from '../utils/validation';
@@ -11,8 +11,10 @@ type ForgotPasswordFormData = {
 };
 
 export default function ForgotPassword() {
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const errorParam = searchParams.get('error');
 
   const {
     register,
@@ -66,6 +68,14 @@ export default function ForgotPassword() {
             Enter your email address and we'll send you a reset link
           </p>
         </div>
+
+        {errorParam === 'expired' && (
+          <div className="rounded-md bg-amber-50 border border-amber-200 p-4">
+            <p className="text-sm text-amber-800">
+              Your password reset link has expired or was already used. Please request a new one below.
+            </p>
+          </div>
+        )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div>
