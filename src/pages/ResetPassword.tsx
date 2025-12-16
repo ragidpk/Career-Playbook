@@ -30,66 +30,79 @@ export default function ResetPassword() {
   const [verifying, setVerifying] = useState(true);
   const [linkError, setLinkError] = useState<string | null>(null);
 
-  // Process the recovery token from URL hash on mount
+  // Process the recovery token - rely on Supabase's auth state change
   useEffect(() => {
-    const processRecoveryToken = async () => {
-      const hash = window.location.hash;
+    const hash = window.location.hash;
 
-      // Check for error in hash
-      if (hash.includes('error=')) {
-        const params = new URLSearchParams(hash.substring(1));
-        const errorCode = params.get('error_code');
+    // Check for error in hash first
+    if (hash.includes('error=')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const errorCode = params.get('error_code');
 
-        if (errorCode === 'otp_expired') {
-          setLinkError('This password reset link has expired. Please request a new one.');
-        } else {
-          setLinkError(params.get('error_description') || 'Invalid reset link.');
-        }
-        setVerifying(false);
-        return;
-      }
-
-      // Check if we have a recovery token
-      if (hash.includes('access_token') && hash.includes('type=recovery')) {
-        try {
-          // Supabase client automatically processes the hash and sets up the session
-          const { data, error } = await supabase.auth.getSession();
-
-          if (error) {
-            setLinkError('Failed to verify reset link. Please request a new one.');
-          } else if (!data.session) {
-            setLinkError('Invalid or expired reset link. Please request a new one.');
-          }
-          // Clear the hash from URL for cleaner display
-          window.history.replaceState(null, '', window.location.pathname);
-        } catch {
-          setLinkError('Failed to process reset link. Please try again.');
-        }
+      if (errorCode === 'otp_expired') {
+        setLinkError('This password reset link has expired. Please request a new one.');
       } else {
-        // No token in URL, check if we already have a valid session
-        const { data } = await supabase.auth.getSession();
+        setLinkError(params.get('error_description') || 'Invalid reset link.');
+      }
+      setVerifying(false);
+      window.history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+
+    // If no hash with recovery token, check for existing session
+    if (!hash.includes('type=recovery')) {
+      supabase.auth.getSession().then(({ data }) => {
         if (!data.session) {
           setLinkError('No valid reset link found. Please request a new password reset.');
         }
-      }
-
-      setVerifying(false);
-    };
-
-    processRecoveryToken();
+        setVerifying(false);
+      });
+    }
+    // If hash has recovery token, let onAuthStateChange handle it
   }, []);
 
-  // Listen for auth state changes (helps with PKCE flow)
+  // Listen for auth state changes - this is the primary handler for recovery tokens
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
+        // Successfully received recovery session
+        setVerifying(false);
+        setLinkError(null);
+        // Clear the hash from URL for cleaner display
+        window.history.replaceState(null, '', window.location.pathname);
+      } else if (event === 'SIGNED_IN' && session) {
+        // Also handle SIGNED_IN with a valid session (some Supabase versions)
+        setVerifying(false);
+        setLinkError(null);
+        window.history.replaceState(null, '', window.location.pathname);
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Token refreshed, session is valid
         setVerifying(false);
         setLinkError(null);
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Set a timeout to stop verifying if no auth event received
+    const timeout = setTimeout(() => {
+      if (verifying) {
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session) {
+            setVerifying(false);
+            setLinkError(null);
+          } else {
+            setLinkError('Failed to verify reset link. The link may have expired or already been used.');
+            setVerifying(false);
+          }
+          window.history.replaceState(null, '', window.location.pathname);
+        });
+      }
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, [verifying]);
 
   const {
     register,

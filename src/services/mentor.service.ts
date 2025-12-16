@@ -102,29 +102,43 @@ export async function acceptInvitation(invitationId: string) {
     body: { invitationId },
   });
 
+  // Check data.error first (Edge Function returns error in body with 400 status)
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
   if (error) {
     // FunctionsHttpError contains response context - try to extract actual error
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const functionsError = error as any;
+
+    // Try multiple ways to extract the error message
     if (functionsError.context) {
       try {
+        // Try to get JSON from response
         const errorBody = await functionsError.context.json();
         if (errorBody?.error) {
           throw new Error(errorBody.error);
         }
       } catch {
-        // JSON parsing failed, fall through to default error
+        // JSON parsing failed, try text
+        try {
+          const text = await functionsError.context.text();
+          if (text) {
+            const parsed = JSON.parse(text);
+            if (parsed?.error) {
+              throw new Error(parsed.error);
+            }
+          }
+        } catch {
+          // Fall through to default error
+        }
       }
     }
-    if (data?.error) {
-      throw new Error(data.error);
-    }
+
     throw new Error(error.message || 'Failed to accept invitation');
   }
 
-  if (data?.error) {
-    throw new Error(data.error);
-  }
   return data;
 }
 

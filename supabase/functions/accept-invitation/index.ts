@@ -20,8 +20,13 @@ serve(async (req) => {
   }
 
   try {
+    // Get auth header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header provided');
+    }
+
     // Get Supabase client with user's auth
-    const authHeader = req.headers.get('Authorization')!;
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -38,8 +43,11 @@ serve(async (req) => {
       error: userError,
     } = await supabaseClient.auth.getUser();
 
-    if (userError || !user) {
-      throw new Error('Unauthorized');
+    if (userError) {
+      throw new Error(`Auth error: ${userError.message}`);
+    }
+    if (!user) {
+      throw new Error('No user found in auth token');
     }
 
     // Parse request body
@@ -49,31 +57,43 @@ serve(async (req) => {
       throw new Error('Invitation ID is required');
     }
 
-    // Get user's email
-    const { data: profile, error: profileError } = await supabaseClient
+    // Use service role for queries to bypass RLS (we verify permissions manually)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Get user's email from profile
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('email')
       .eq('id', user.id)
       .single();
 
-    if (profileError || !profile) {
-      throw new Error('Profile not found');
+    if (profileError) {
+      throw new Error(`Profile error: ${profileError.message}`);
+    }
+    if (!profile) {
+      throw new Error(`No profile found for user ${user.id}`);
     }
 
-    // Get invitation and verify it belongs to this mentor (case-insensitive email match)
-    const { data: invitation, error: invitationError } = await supabaseClient
+    // Get invitation
+    const { data: invitation, error: invitationError } = await supabaseAdmin
       .from('mentor_invitations')
       .select('id, job_seeker_id, mentor_email, status')
       .eq('id', invitationId)
       .single();
 
-    if (invitationError || !invitation) {
-      throw new Error('Invitation not found');
+    if (invitationError) {
+      throw new Error(`Invitation error: ${invitationError.message}`);
+    }
+    if (!invitation) {
+      throw new Error(`No invitation found with ID ${invitationId}`);
     }
 
-    // Verify email matches (case-insensitive)
+    // Verify email matches (case-insensitive) - SECURITY CHECK
     if (invitation.mentor_email.toLowerCase() !== profile.email.toLowerCase()) {
-      throw new Error('This invitation was not sent to your email address');
+      throw new Error(`Email mismatch: invitation sent to ${invitation.mentor_email}, but you are logged in as ${profile.email}`);
     }
 
     // Check if already accepted
@@ -85,12 +105,6 @@ serve(async (req) => {
     if (invitation.status === 'declined') {
       throw new Error('This invitation has been declined');
     }
-
-    // Use service role key for transaction safety
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
 
     // CRITICAL: Transaction safety - Update invitation status and create access record
     // Step 1: Update invitation status
