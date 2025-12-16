@@ -5,29 +5,13 @@ import { ArrowRight } from 'lucide-react';
 import type { PersonalInfo } from '../../../types/resumeBuilder.types';
 import { useEffect, useRef, useCallback } from 'react';
 
-// Custom URL validation that accepts URLs with or without protocol
-const optionalUrl = z.string().refine(
-  (val) => {
-    if (!val || val.trim() === '') return true; // Empty is OK
-    // Add https:// if no protocol, then validate
-    const urlToTest = val.match(/^https?:\/\//) ? val : `https://${val}`;
-    try {
-      new URL(urlToTest);
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  { message: 'Invalid URL format' }
-).optional().or(z.literal(''));
-
 const personalInfoSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(1, 'Phone number is required'),
   location: z.string().min(1, 'Location is required'),
-  linkedIn: optionalUrl,
-  website: optionalUrl,
+  linkedIn: z.string().optional(),
+  website: z.string().optional(),
   title: z.string().optional(),
 });
 
