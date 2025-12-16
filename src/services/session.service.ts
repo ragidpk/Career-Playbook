@@ -420,31 +420,60 @@ export async function createSessionReminders(
 // ============================================
 
 /**
- * Check if user can create a session with another user (must be collaborators)
+ * Check if user can create a session with another user
+ * Must be either:
+ * 1. A collaborator on a plan with the user (plan_collaborators)
+ * 2. A mentor with access to the user (mentor_access)
  */
 export async function canScheduleWith(
   hostId: string,
-  _attendeeId: string,
+  attendeeId: string,
   planId?: string
 ): Promise<boolean> {
-  // Check if they are collaborators on any plan
-  const { data, error } = await supabase
+  // Check 1: Are they plan collaborators?
+  const { data: planCollabs, error: planError } = await supabase
     .from('plan_collaborators')
     .select('id, plan_id')
     .eq('collaborator_id', hostId)
     .eq('status', 'accepted');
 
-  if (error) return false;
-
-  const collaborators = (data || []) as { id: string; plan_id: string }[];
-
-  // If planId specified, verify it's for that plan
-  if (planId && collaborators.length > 0) {
-    const planMatch = collaborators.some((c) => c.plan_id === planId);
-    if (!planMatch) return false;
+  if (!planError && planCollabs && planCollabs.length > 0) {
+    // If planId specified, verify it's for that plan
+    if (planId) {
+      const planMatch = (planCollabs as { id: string; plan_id: string }[]).some(
+        (c) => c.plan_id === planId
+      );
+      if (planMatch) return true;
+    } else {
+      return true;
+    }
   }
 
-  return collaborators.length > 0;
+  // Check 2: Is the host a mentor with access to the attendee?
+  const { data: mentorAccess, error: mentorError } = await supabase
+    .from('mentor_access')
+    .select('id')
+    .eq('mentor_id', hostId)
+    .eq('job_seeker_id', attendeeId)
+    .maybeSingle();
+
+  if (!mentorError && mentorAccess) {
+    return true;
+  }
+
+  // Check 3: Is the host the job seeker and the attendee is their mentor?
+  const { data: reverseAccess, error: reverseError } = await supabase
+    .from('mentor_access')
+    .select('id')
+    .eq('job_seeker_id', hostId)
+    .eq('mentor_id', attendeeId)
+    .maybeSingle();
+
+  if (!reverseError && reverseAccess) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
