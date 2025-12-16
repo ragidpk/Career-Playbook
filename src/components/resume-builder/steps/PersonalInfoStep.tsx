@@ -163,13 +163,10 @@ export default function PersonalInfoStep({ data, onUpdate, onNext }: PersonalInf
             </label>
             <input
               {...register('linkedIn')}
-              type="url"
-              placeholder="https://linkedin.com/in/johndoe"
+              type="text"
+              placeholder="linkedin.com/in/johndoe"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
-            {errors.linkedIn && (
-              <p className="mt-1 text-sm text-red-600">{errors.linkedIn.message}</p>
-            )}
           </div>
 
           {/* Website */}
@@ -179,13 +176,10 @@ export default function PersonalInfoStep({ data, onUpdate, onNext }: PersonalInf
             </label>
             <input
               {...register('website')}
-              type="url"
-              placeholder="https://johndoe.com"
+              type="text"
+              placeholder="yourwebsite.com"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
-            {errors.website && (
-              <p className="mt-1 text-sm text-red-600">{errors.website.message}</p>
-            )}
           </div>
         </div>
 
