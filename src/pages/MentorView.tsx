@@ -2,7 +2,7 @@
 // Mentor dashboard showing mentee's Canvas and Plan in read-only mode
 
 import { useState, useEffect } from 'react';
-import { Calendar, Plus } from 'lucide-react';
+import { Calendar, Plus, User, Target, FileText } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useCanvas } from '../hooks/useCanvas';
 import { usePlan } from '../hooks/usePlan';
@@ -10,7 +10,6 @@ import { useSessions, useCreateSession } from '../hooks/useSession';
 import { getMentees } from '../services/mentor.service';
 import type { Mentee } from '../services/mentor.service';
 import type { CreateSessionInput } from '../types/session.types';
-import MenteeSelector from '../components/mentor/MenteeSelector';
 import ReadOnlyOverlay from '../components/mentor/ReadOnlyOverlay';
 import Card from '../components/shared/Card';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
@@ -118,56 +117,124 @@ export default function MentorView() {
 
       <div className="p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header with mentee selector */}
+          {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-3xl font-bold text-gray-900">Mentor Dashboard</h1>
-              <MenteeSelector
-                selectedMenteeId={selectedMenteeId}
-                onSelect={setSelectedMenteeId}
-              />
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Mentor Dashboard</h1>
+            <p className="text-gray-600">View and support your mentees' career journey</p>
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Left Sidebar - Mentee List */}
+            <div className="lg:w-72 flex-shrink-0">
+              <Card className="sticky top-4">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-primary-600" />
+                  My Mentees
+                </h2>
+                <div className="space-y-2">
+                  {mentees.map((mentee) => {
+                    const isSelected = mentee.job_seeker_id === selectedMenteeId;
+                    const name = mentee.profiles.full_name || mentee.profiles.email;
+                    return (
+                      <button
+                        key={mentee.job_seeker_id}
+                        onClick={() => setSelectedMenteeId(mentee.job_seeker_id)}
+                        className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                          isSelected
+                            ? 'bg-primary-50 border-2 border-primary-500 text-primary-700'
+                            : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                            isSelected ? 'bg-primary-600' : 'bg-gray-400'
+                          }`}>
+                            {name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className={`font-medium truncate ${isSelected ? 'text-primary-700' : 'text-gray-900'}`}>
+                              {name}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {mentee.profiles.email}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('canvas')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'canvas'
-                      ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Your Career Plans
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('plan')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'plan'
-                      ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  90-Day Plan
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('sessions')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                    activeTab === 'sessions'
-                      ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Calendar className="w-4 h-4" />
-                  Sessions
-                </button>
-              </nav>
-            </div>
-          </div>
+            {/* Right Content Area */}
+            <div className="flex-1 min-w-0">
+              {/* Selected Mentee Header */}
+              {selectedMentee && (
+                <Card className="mb-6 bg-gradient-to-r from-primary-50 to-indigo-50 border-primary-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-full bg-primary-600 flex items-center justify-center text-white text-xl font-bold">
+                        {menteeName?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-900">{menteeName}</h2>
+                        <p className="text-sm text-gray-600">{selectedMentee.profiles.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowScheduleModal(true)}
+                      disabled={!canSchedule}
+                      className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Schedule Session
+                    </button>
+                  </div>
+                </Card>
+              )}
+
+              {/* Tab Navigation */}
+              <div className="border-b border-gray-200 mb-6">
+                <nav className="-mb-px flex space-x-6">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('canvas')}
+                    className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                      activeTab === 'canvas'
+                        ? 'border-primary-500 text-primary-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Target className="w-4 h-4" />
+                    Career Canvas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('plan')}
+                    className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                      activeTab === 'plan'
+                        ? 'border-primary-500 text-primary-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    90-Day Plan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('sessions')}
+                    className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                      activeTab === 'sessions'
+                        ? 'border-primary-500 text-primary-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Sessions
+                  </button>
+                </nav>
+              </div>
 
           {/* Canvas Tab */}
           {activeTab === 'canvas' && (
@@ -325,6 +392,8 @@ export default function MentorView() {
               )}
             </>
           )}
+            </div>
+          </div>
         </div>
       </div>
 
