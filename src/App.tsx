@@ -23,6 +23,7 @@ import PlanEdit from './pages/PlanEdit';
 import InviteCollaborators from './pages/InviteCollaborators';
 import AcceptPlanInvitation from './pages/AcceptPlanInvitation';
 import Resume from './pages/Resume';
+import ResumeBuilder from './pages/ResumeBuilder';
 import CRM from './pages/CRM';
 import Jobs from './pages/Jobs';
 import Interviews from './pages/Interviews';
@@ -115,6 +116,7 @@ function App() {
                 <Route path="/plans/:id/collaborators" element={<InviteCollaborators />} />
                 <Route path="/accept-plan-invitation" element={<AcceptPlanInvitation />} />
                 <Route path="/resume" element={<Resume />} />
+                <Route path="/resume-builder" element={<ResumeBuilder />} />
                 <Route path="/crm" element={<CRM />} />
                 <Route path="/jobs" element={<Jobs />} />
                 <Route path="/interviews" element={<Interviews />} />

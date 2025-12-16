@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   FileText,
+  FilePlus,
   Target,
   Briefcase,
   Building2,
@@ -25,6 +26,7 @@ const navItems = [
   { path: '/canvas', label: 'Your Career Plans', icon: Target },
   { path: '/plan', label: '90-Day Plan', icon: FileText },
   { path: '/resume', label: 'Resume Analysis', icon: FileText },
+  { path: '/resume-builder', label: 'Resume Builder', icon: FilePlus },
   { path: '/jobs', label: 'Job Board', icon: Briefcase },
   { path: '/crm', label: 'Job Hunt CRM', icon: Building2 },
   { path: '/interviews', label: 'Interviews', icon: Calendar },
