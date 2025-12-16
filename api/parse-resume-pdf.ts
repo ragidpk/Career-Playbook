@@ -1,7 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-// @ts-expect-error - pdf-parse types may not be available
-import pdfParse from 'pdf-parse';
 
 // Environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -11,6 +9,78 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API
 interface ParseRequest {
   fileData: string; // Base64 encoded PDF
   fileName: string;
+}
+
+// PDF text extraction using pdf2json (same as analyze-resume.ts)
+async function extractTextWithPdf2json(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    import('pdf2json').then((pdf2jsonModule) => {
+      const PDFParser = pdf2jsonModule.default;
+      const pdfParser = new PDFParser();
+
+      pdfParser.on('pdfParser_dataError', (errData: { parserError: Error }) => {
+        console.error('pdf2json error:', errData.parserError);
+        reject(errData.parserError);
+      });
+
+      pdfParser.on('pdfParser_dataReady', (pdfData: { Pages: Array<{ Texts: Array<{ R: Array<{ T: string }> }> }> }) => {
+        try {
+          const textParts: string[] = [];
+
+          for (const page of pdfData.Pages) {
+            for (const textItem of page.Texts) {
+              for (const run of textItem.R) {
+                let decodedText: string;
+                try {
+                  decodedText = decodeURIComponent(run.T);
+                } catch {
+                  decodedText = run.T.replace(/%([0-9A-Fa-f]{2})/g, (_, hex) => {
+                    try {
+                      return String.fromCharCode(parseInt(hex, 16));
+                    } catch {
+                      return '';
+                    }
+                  });
+                }
+                if (decodedText.trim()) {
+                  textParts.push(decodedText);
+                }
+              }
+            }
+            textParts.push('\n');
+          }
+
+          const fullText = textParts.join(' ').replace(/\s+/g, ' ').trim();
+          resolve(fullText);
+        } catch (err) {
+          reject(err);
+        }
+      });
+
+      pdfParser.parseBuffer(buffer);
+    }).catch(reject);
+  });
+}
+
+// Fallback text extraction
+function extractTextFallback(buffer: Buffer): string {
+  const content = buffer.toString('latin1');
+  const textMatches = content.match(/\(([^)]+)\)/g) || [];
+  const extractedParts: string[] = [];
+
+  for (const match of textMatches) {
+    const inner = match.slice(1, -1);
+    const cleaned = inner
+      .replace(/\\([0-7]{3})/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)))
+      .replace(/\\(.)/g, '$1')
+      .replace(/[^\x20-\x7E\s]/g, ' ');
+
+    if (cleaned.trim().length > 1) {
+      extractedParts.push(cleaned.trim());
+    }
+  }
+
+  return extractedParts.join(' ').replace(/\s+/g, ' ').trim();
 }
 
 // CORS headers
@@ -73,16 +143,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pdfBuffer = Buffer.from(fileData, 'base64');
     let pdfText = '';
 
+    // Try pdf2json first, then fallback
     try {
-      const pdfData = await pdfParse(pdfBuffer);
-      pdfText = pdfData.text;
+      pdfText = await extractTextWithPdf2json(pdfBuffer);
+      console.log('PDF parsed with pdf2json. Text length:', pdfText.length);
     } catch (pdfError) {
-      console.error('PDF parse error:', pdfError);
-      return res.status(400).json({ error: 'Failed to parse PDF. Please ensure it is a valid PDF file.' });
+      console.error('pdf2json error, trying fallback:', pdfError);
+      try {
+        pdfText = extractTextFallback(pdfBuffer);
+        console.log('Fallback extraction. Text length:', pdfText.length);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        return res.status(400).json({ error: 'Failed to parse PDF. Please ensure it is a valid PDF file.' });
+      }
     }
 
     if (!pdfText || pdfText.trim().length < 50) {
-      return res.status(400).json({ error: 'Could not extract text from PDF. Please try a different file.' });
+      return res.status(400).json({ error: 'Could not extract text from PDF. The file may be scanned or image-based.' });
     }
 
     // Use OpenAI to extract structured data
