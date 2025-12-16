@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import NotificationSettings from '../components/notifications/NotificationSettings';
+import AvatarUpload from '../components/shared/AvatarUpload';
 import {
   YEARS_OF_EXPERIENCE_OPTIONS,
   JOB_SEARCH_STATUS_OPTIONS,
@@ -154,6 +155,19 @@ export default function Settings() {
                 </div>
               ) : (
                 <div className="space-y-8">
+                  {/* Profile Photo */}
+                  <div className="flex flex-col items-center pb-6 border-b border-gray-100">
+                    <AvatarUpload
+                      userId={user.id}
+                      currentAvatarUrl={profile?.avatar_url}
+                      userName={profile?.full_name || user.email}
+                      onUploadComplete={(newUrl) => {
+                        updateProfile({ avatar_url: newUrl });
+                      }}
+                      size="xl"
+                    />
+                  </div>
+
                   {/* Personal Information */}
                   <div>
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">

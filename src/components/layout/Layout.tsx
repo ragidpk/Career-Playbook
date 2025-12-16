@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,11 +15,15 @@ import {
   X,
   ChevronDown,
   Shield,
+  Camera,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { signOut } from '../../services/auth.service';
 import { useIsAdmin } from '../../hooks/useAdmin';
+import { useProfile } from '../../hooks/useProfile';
+import { uploadAvatar } from '../../services/avatar.service';
 import NotificationBell from '../notifications/NotificationBell';
+import Avatar from '../shared/Avatar';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -37,9 +41,12 @@ const navItems = [
 export default function Layout() {
   const { user } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { profile, updateProfile } = useProfile(user?.id);
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const handleSignOut = async () => {
     try {
@@ -50,17 +57,23 @@ export default function Layout() {
     }
   };
 
-  const getUserInitials = () => {
-    const name = user?.user_metadata?.full_name || user?.email || '';
-    if (name.includes('@')) {
-      return name.charAt(0).toUpperCase();
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const newUrl = await uploadAvatar(user.id, file);
+      await updateProfile({ avatar_url: newUrl });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+    } finally {
+      setIsUploadingAvatar(false);
+      setUserMenuOpen(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
     }
-    return name
-      .split(' ')
-      .map((n: string) => n.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   return (
@@ -184,11 +197,11 @@ export default function Layout() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 transition-smooth"
                 >
-                  <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center shadow-button ring-2 ring-white">
-                    <span className="text-sm font-semibold text-white">
-                      {getUserInitials()}
-                    </span>
-                  </div>
+                  <Avatar
+                    src={profile?.avatar_url}
+                    name={user?.user_metadata?.full_name || user?.email}
+                    size="md"
+                  />
                   <div className="hidden sm:block text-left">
                     <p className="text-sm font-semibold text-gray-900 truncate max-w-[150px]">
                       {user?.user_metadata?.full_name || 'User'}
@@ -216,6 +229,15 @@ export default function Layout() {
                           {user?.email}
                         </p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        disabled={isUploadingAvatar}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-smooth disabled:opacity-50"
+                      >
+                        <Camera className="w-4 h-4" />
+                        {isUploadingAvatar ? 'Uploading...' : 'Change Photo'}
+                      </button>
                       <NavLink
                         to="/settings"
                         onClick={() => setUserMenuOpen(false)}
@@ -232,6 +254,14 @@ export default function Layout() {
                         <LogOut className="w-4 h-4" />
                         Sign out
                       </button>
+                      {/* Hidden file input for avatar upload */}
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                      />
                     </div>
                   </>
                 )}

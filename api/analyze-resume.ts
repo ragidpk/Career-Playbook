@@ -1,10 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Environment variables (check both standard and VITE_ prefixed versions)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+
+// AWS S3 Configuration
+const AWS_REGION = process.env.AWS_REGION || 'me-central-1';
+const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
+const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+const S3_RESUMES_BUCKET = process.env.S3_RESUMES_BUCKET || 'career-playbook-resumes-prod';
+
+// Initialize S3 client
+const s3Client = new S3Client({
+  region: AWS_REGION,
+  credentials: AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY ? {
+    accessKeyId: AWS_ACCESS_KEY_ID,
+    secretAccessKey: AWS_SECRET_ACCESS_KEY,
+  } : undefined,
+});
 
 interface ResumeAnalysisRequest {
   filePath: string;
@@ -66,6 +83,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         hasServiceRole: !!SUPABASE_SERVICE_ROLE_KEY,
         hasOpenAI: !!OPENAI_API_KEY,
       });
+      return res.status(500).json({ error: 'Server configuration error. Please contact support.' });
+    }
+
+    // Validate AWS credentials
+    if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
+      console.error('Missing AWS credentials');
       return res.status(500).json({ error: 'Server configuration error. Please contact support.' });
     }
 
@@ -157,19 +180,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const newUsageCount = quotaRow.usage_count;
     console.log('Rate limit passed. Current usage:', newUsageCount);
 
-    // 7. Generate signed URL and download file
-    console.log('Generating signed URL...');
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from('resumes')
-      .createSignedUrl(filePath, 300);
+    // 7. Generate S3 signed URL and download file
+    console.log('Generating S3 signed URL for key:', filePath);
 
-    if (signedUrlError || !signedUrlData) {
-      console.error('Failed to generate signed URL:', signedUrlError);
+    let signedUrl: string;
+    try {
+      const getCommand = new GetObjectCommand({
+        Bucket: S3_RESUMES_BUCKET,
+        Key: filePath,
+      });
+      signedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 300 });
+    } catch (s3Error) {
+      console.error('Failed to generate S3 signed URL:', s3Error);
       return res.status(404).json({ error: 'File not found. Please upload your resume again.' });
     }
 
-    console.log('Downloading PDF...');
-    const pdfResponse = await fetch(signedUrlData.signedUrl);
+    console.log('Downloading PDF from S3...');
+    const pdfResponse = await fetch(signedUrl);
 
     if (!pdfResponse.ok) {
       console.error('PDF download failed:', pdfResponse.status, pdfResponse.statusText);

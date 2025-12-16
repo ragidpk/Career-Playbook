@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Briefcase, Target, ChevronRight, ChevronLeft, Check, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import AvatarUpload from '../components/shared/AvatarUpload';
 import {
   completeOnboarding,
   YEARS_OF_EXPERIENCE_OPTIONS,
@@ -17,6 +18,7 @@ type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 interface FormData {
   // Step 1: Personal Info
+  avatar_url: string;
   full_name: string;
   phone_number: string;
   current_location: string;
@@ -37,6 +39,7 @@ interface FormData {
 }
 
 const initialFormData: FormData = {
+  avatar_url: '',
   full_name: '',
   phone_number: '',
   current_location: '',
@@ -142,6 +145,7 @@ export default function Onboarding() {
 
     try {
       const profileData: ProfileUpdate = {
+        avatar_url: formData.avatar_url || null,
         full_name: formData.full_name || null,
         phone_number: formData.phone_number || null,
         current_location: formData.current_location || null,
@@ -181,6 +185,17 @@ export default function Onboarding() {
               <p className="text-gray-600">
                 Tell us a bit about yourself to personalize your experience
               </p>
+            </div>
+
+            {/* Profile Photo */}
+            <div className="flex justify-center pb-4">
+              <AvatarUpload
+                userId={user?.id || ''}
+                currentAvatarUrl={formData.avatar_url || null}
+                userName={formData.full_name || user?.user_metadata?.full_name}
+                onUploadComplete={(newUrl) => handleChange('avatar_url', newUrl)}
+                size="xl"
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

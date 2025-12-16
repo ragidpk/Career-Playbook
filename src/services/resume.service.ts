@@ -1,3 +1,6 @@
+import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { s3Client, RESUMES_BUCKET } from '../lib/s3';
 import { supabase } from './supabase';
 import type { Database } from '../types/database.types';
 
@@ -28,31 +31,36 @@ export async function uploadResume(file: File, userId: string): Promise<string> 
     throw new Error('File size must be less than 10MB');
   }
 
-  // Upload to storage bucket: resumes/{userId}/{timestamp}_{filename}
-  const filePath = `${userId}/${Date.now()}_${file.name}`;
-  if (isDevelopment) console.log('Uploading to path:', filePath);
+  // Generate S3 key: {userId}/{timestamp}_{filename}
+  const key = `${userId}/${Date.now()}_${file.name}`;
+  if (isDevelopment) console.log('Uploading to S3 key:', key);
 
-  const { data, error } = await supabase.storage
-    .from('resumes')
-    .upload(filePath, file);
+  // Convert File to ArrayBuffer
+  const arrayBuffer = await file.arrayBuffer();
 
-  if (error) {
+  // Upload to S3
+  const command = new PutObjectCommand({
+    Bucket: RESUMES_BUCKET,
+    Key: key,
+    Body: new Uint8Array(arrayBuffer),
+    ContentType: 'application/pdf',
+  });
+
+  try {
+    await s3Client.send(command);
+    if (isDevelopment) console.log('Upload successful. Key:', key);
+    return key; // Return S3 key for backend processing
+  } catch (error) {
     if (isDevelopment) console.error('Upload error:', error);
     throw error;
   }
-
-  if (isDevelopment) console.log('Upload successful. Path:', data.path);
-
-  // SECURITY: Return storage path, not signed URL
-  // Edge Function will generate signed URL server-side
-  return data.path;
 }
 
 export async function analyzeResume(filePath: string, fileName: string, targetCountry: string = 'United Arab Emirates') {
   // SECURITY: Only log in development to avoid PII leakage
   if (isDevelopment) {
     console.log('=== ANALYZE RESUME SERVICE CALLED ===');
-    console.log('File Path:', filePath);
+    console.log('File Path (S3 Key):', filePath);
     console.log('File Name:', fileName);
     console.log('Target Country:', targetCountry);
   }
@@ -64,8 +72,7 @@ export async function analyzeResume(filePath: string, fileName: string, targetCo
     throw new Error('Authentication required. Please sign in.');
   }
 
-  // Call Vercel API route instead of Supabase Edge Function
-  // This uses Node.js runtime where pdf-parse works natively
+  // Call Vercel API route
   const response = await fetch('/api/analyze-resume', {
     method: 'POST',
     headers: {
@@ -106,36 +113,34 @@ export async function getAnalysisHistory(userId: string) {
 
   if (error) throw error;
 
-  // SECURITY: file_url now contains storage paths (not signed URLs)
+  // SECURITY: file_url contains S3 keys (not signed URLs)
   // Generate signed URLs on-demand when needed for download/preview
   return data;
 }
 
 /**
  * Generate a signed URL for downloading/viewing a resume from history
- * @param filePath Storage path (e.g., "userId/timestamp_filename.pdf")
+ * @param filePath S3 key (e.g., "userId/timestamp_filename.pdf")
  * @param expiresIn Expiry time in seconds (default: 1 hour)
  * @returns Signed URL for temporary access
  */
 export async function getResumeDownloadUrl(filePath: string, expiresIn: number = 3600): Promise<string> {
   if (isDevelopment) {
-    console.log('Generating signed URL for path:', filePath);
+    console.log('Generating signed URL for S3 key:', filePath);
   }
 
-  const { data, error } = await supabase.storage
-    .from('resumes')
-    .createSignedUrl(filePath, expiresIn);
+  const command = new GetObjectCommand({
+    Bucket: RESUMES_BUCKET,
+    Key: filePath,
+  });
 
-  if (error) {
+  try {
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
+    return signedUrl;
+  } catch (error) {
     if (isDevelopment) console.error('Failed to generate signed URL:', error);
     throw new Error('Failed to generate download link');
   }
-
-  if (!data?.signedUrl) {
-    throw new Error('No signed URL returned');
-  }
-
-  return data.signedUrl;
 }
 
 export async function checkUsageLimit(userId: string) {
@@ -172,23 +177,25 @@ export async function checkUsageLimit(userId: string) {
 
 /**
  * Delete a resume analysis record
- * Also deletes the associated file from storage
+ * Also deletes the associated file from S3 storage
  * @param analysisId The ID of the analysis to delete
- * @param filePath The storage path of the resume file
+ * @param filePath The S3 key of the resume file
  */
 export async function deleteAnalysis(analysisId: string, filePath: string): Promise<void> {
   if (isDevelopment) {
-    console.log('Deleting analysis:', analysisId, 'and file:', filePath);
+    console.log('Deleting analysis:', analysisId, 'and S3 key:', filePath);
   }
 
-  // Delete the file from storage first
+  // Delete the file from S3 first
   if (filePath) {
-    const { error: storageError } = await supabase.storage
-      .from('resumes')
-      .remove([filePath]);
-
-    if (storageError) {
-      console.error('Failed to delete file from storage:', storageError);
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: RESUMES_BUCKET,
+        Key: filePath,
+      });
+      await s3Client.send(command);
+    } catch (error) {
+      console.error('Failed to delete file from S3:', error);
       // Continue anyway - we still want to delete the DB record
     }
   }
