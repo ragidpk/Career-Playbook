@@ -172,8 +172,17 @@ export function useAdminMentors() {
       ]);
       setMentors(mentorData);
       setInvitations(invitationData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load mentors');
+    } catch (err: unknown) {
+      // Log detailed error for debugging RLS issues
+      const error = err as { code?: string; message?: string; details?: string; hint?: string };
+      console.error('[useAdminMentors] Error loading mentors:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        raw: err,
+      });
+      setError(error.message || 'Failed to load mentors');
     } finally {
       setIsLoading(false);
     }

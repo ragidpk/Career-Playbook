@@ -16,9 +16,10 @@ import { usePlan } from '../hooks/usePlan';
 import { useCanvas } from '../hooks/useCanvas';
 import { useAuth } from '../hooks/useAuth';
 import { deletePlan, generateAIMilestones, updateMilestone } from '../services/plan.service';
-import { getPlanCollaborators, type PlanCollaborator } from '../services/collaborator.service';
+import { getPlanCollaboratorsWithProfiles, type PlanCollaborator } from '../services/collaborator.service';
+import { getPlanFeedbackLatest, getPlanComments, type MilestoneFeedback, type MilestoneComment } from '../services/feedback.service';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
-import MilestoneTimeline from '../components/plan/MilestoneTimeline';
+import MilestoneGrid from '../components/plan/MilestoneGrid';
 import { format } from 'date-fns';
 
 // Submission status display config
@@ -41,11 +42,13 @@ export default function PlanDetail() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showTimeline, setShowTimeline] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, MilestoneFeedback>>({});
+  const [commentsMap, setCommentsMap] = useState<Record<string, MilestoneComment[]>>({});
 
-  // Load collaborators
+  // Load collaborators with profile info
   useEffect(() => {
     if (id) {
-      getPlanCollaborators(id)
+      getPlanCollaboratorsWithProfiles(id)
         .then(setCollaborators)
         .catch((err) => {
           // Don't silently fail - log and show error for non-404 errors
@@ -54,6 +57,14 @@ export default function PlanDetail() {
             setDataError('Failed to load collaborators');
           }
         });
+    }
+  }, [id]);
+
+  // Load feedback and comments from mentors
+  useEffect(() => {
+    if (id) {
+      getPlanFeedbackLatest(id).then(setFeedbackMap).catch(console.error);
+      getPlanComments(id).then(setCommentsMap).catch(console.error);
     }
   }, [id]);
 
@@ -215,6 +226,11 @@ export default function PlanDetail() {
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-gray-400" />
                 <span className="text-gray-700">Collaborators ({acceptedCollaborators.length})</span>
+                {acceptedCollaborators.filter(c => c.role === 'mentor').length > 0 && (
+                  <span className="text-sm text-primary-600">
+                    - Mentor: {acceptedCollaborators.filter(c => c.role === 'mentor').map(c => c.collaborator_name || c.collaborator_email).join(', ')}
+                  </span>
+                )}
               </div>
               <Link
                 to={`/plans/${id}/collaborators`}
@@ -303,18 +319,23 @@ export default function PlanDetail() {
                   </div>
                 </div>
               ) : (
-                /* Milestone Timeline */
-                <MilestoneTimeline
-                  planId={id!}
-                  milestones={milestones}
+                /* Milestone Grid with Feedback */
+                <MilestoneGrid
                   planTitle={plan.title}
-                  userInfo={{
-                    name: user?.user_metadata?.full_name || user?.user_metadata?.name,
-                    email: user?.email,
-                  }}
-                  canvas={canvas}
                   planStartDate={plan.start_date}
+                  milestones={milestones}
+                  feedbackMap={feedbackMap}
+                  commentsMap={commentsMap}
                   onToggleComplete={handleToggleComplete}
+                  onCommentAdded={(milestoneId, comment) => {
+                    setCommentsMap(prev => ({
+                      ...prev,
+                      [milestoneId]: [...(prev[milestoneId] || []), comment]
+                    }));
+                  }}
+                  readOnly={false}
+                  showFeedback={true}
+                  currentUserId={user?.id}
                 />
               )}
             </div>

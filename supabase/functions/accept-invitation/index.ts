@@ -152,6 +152,10 @@ serve(async (req) => {
       throw new Error(`Failed to create mentor access: ${accessError.message}`);
     }
 
+    // Note: We don't update the user's profile role here because users can have
+    // multiple roles simultaneously (e.g., super_admin + mentor, job_seeker + mentor).
+    // Mentorship is determined by the mentor_access table, not the profile role.
+
     // Step 3: Get job seeker's profile to send notification email
     const { data: jobSeekerProfile } = await supabaseAdmin
       .from('profiles')

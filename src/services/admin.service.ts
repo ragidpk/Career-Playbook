@@ -567,13 +567,32 @@ export interface MentorInvitationAdmin {
   created_at: string;
 }
 
-// Get all mentors with their mentees
+// Get all mentors with their mentees (based on mentor_access table)
 export async function getAllMentors(): Promise<MentorWithMentees[]> {
-  // Get all users with mentor role
+  // Get mentor access records to find all active mentors
+  const { data: accessRecords, error: accessError } = await supabase
+    .from('mentor_access')
+    .select('*');
+
+  if (accessError) {
+    if (accessError.code === '42P01') {
+      return []; // Table doesn't exist
+    }
+    throw accessError;
+  }
+
+  if (!accessRecords || accessRecords.length === 0) {
+    return [];
+  }
+
+  // Get unique mentor IDs from mentor_access table
+  const mentorIds = [...new Set((accessRecords || []).map((r: any) => r.mentor_id))];
+
+  // Get mentor profiles
   const { data: mentorsData, error: mentorError } = await supabase
     .from('profiles')
     .select('id, email, full_name, role, created_at')
-    .eq('role', 'mentor')
+    .in('id', mentorIds)
     .order('created_at', { ascending: false });
 
   if (mentorError) throw mentorError;
@@ -585,16 +604,6 @@ export async function getAllMentors(): Promise<MentorWithMentees[]> {
     role: string;
     created_at: string;
   }>;
-
-  // Get mentor access records to find mentees
-  const { data: accessRecords, error: accessError } = await supabase
-    .from('mentor_access')
-    .select('*');
-
-  if (accessError && accessError.code !== '42P01') {
-    // Ignore if table doesn't exist
-    console.warn('mentor_access table error:', accessError);
-  }
 
   // Get job seeker profiles for mentees
   const jobSeekerIds = [...new Set((accessRecords || []).map((r: any) => r.job_seeker_id))];
@@ -646,13 +655,13 @@ export async function getAllMentorInvitations(): Promise<MentorInvitationAdmin[]
       job_seeker_id,
       mentor_email,
       status,
-      created_at,
+      invited_at,
       profiles!mentor_invitations_job_seeker_id_fkey (
         email,
         full_name
       )
     `)
-    .order('created_at', { ascending: false });
+    .order('invited_at', { ascending: false });
 
   if (error) throw error;
 
@@ -678,7 +687,7 @@ export async function getAllMentorInvitations(): Promise<MentorInvitationAdmin[]
       mentor_id: mentorInfo?.id || null,
       mentor_name: mentorInfo?.full_name || null,
       status: inv.status,
-      created_at: inv.created_at,
+      created_at: inv.invited_at,
     };
   });
 }

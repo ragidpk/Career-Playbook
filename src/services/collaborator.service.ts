@@ -32,6 +32,13 @@ export interface InviteCollaboratorInput {
  * Invite a collaborator to a plan
  */
 export async function inviteCollaborator(input: InviteCollaboratorInput) {
+  // Get current session to ensure auth header is included
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    throw new Error('You must be logged in to invite collaborators');
+  }
+
   const { data, error } = await supabase.functions.invoke('send-plan-invitation', {
     body: {
       planId: input.planId,
@@ -41,9 +48,32 @@ export async function inviteCollaborator(input: InviteCollaboratorInput) {
       jobSeekerName: input.jobSeekerName,
       planTitle: input.planTitle,
     },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
   });
 
-  if (error) throw error;
+  // Check for error in response body first (edge function returns error in JSON)
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  if (error) {
+    // Try to extract error message from FunctionsHttpError
+    const functionsError = error as any;
+    if (functionsError.context) {
+      try {
+        const errorBody = await functionsError.context.json();
+        if (errorBody?.error) {
+          throw new Error(errorBody.error);
+        }
+      } catch {
+        // Fall through to default error
+      }
+    }
+    throw new Error(error.message || 'Failed to send invitation');
+  }
+
   return data;
 }
 
@@ -69,15 +99,10 @@ export async function getPlanCollaborators(planId: string): Promise<PlanCollabor
  * Get plan collaborators with profile info
  */
 export async function getPlanCollaboratorsWithProfiles(planId: string): Promise<PlanCollaborator[]> {
+  // First get the collaborators
   const { data, error } = await supabase
     .from('plan_collaborators')
-    .select(`
-      *,
-      profiles:collaborator_id (
-        full_name,
-        email
-      )
-    `)
+    .select('*')
     .eq('plan_id', planId)
     .order('created_at', { ascending: false });
 
@@ -86,9 +111,36 @@ export async function getPlanCollaboratorsWithProfiles(planId: string): Promise<
     throw error;
   }
 
-  return (data || []).map((item: any) => ({
+  if (!data || data.length === 0) return [];
+
+  // Get profile info for collaborators who have accepted (have collaborator_id)
+  // Use profiles_public for safe access to display names
+  const collaboratorIds = [...new Set(
+    data
+      .filter((c: any) => c.collaborator_id)
+      .map((c: any) => c.collaborator_id)
+  )];
+
+  const profileMap: Record<string, string> = {};
+
+  if (collaboratorIds.length > 0) {
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles_public')
+      .select('id, full_name')
+      .in('id', collaboratorIds);
+
+    if (profileError) {
+      console.error('Error fetching profiles:', profileError);
+    }
+
+    (profiles || []).forEach((p: any) => {
+      profileMap[p.id] = p.full_name;
+    });
+  }
+
+  return data.map((item: any) => ({
     ...item,
-    collaborator_name: item.profiles?.full_name || null,
+    collaborator_name: item.collaborator_id ? profileMap[item.collaborator_id] || null : null,
   }));
 }
 

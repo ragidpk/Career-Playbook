@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from './components/shared/Toast';
 import LandingPage from './pages/LandingPage';
@@ -28,7 +28,6 @@ import CRM from './pages/CRM';
 import Jobs from './pages/Jobs';
 import Interviews from './pages/Interviews';
 import Mentors from './pages/Mentors';
-import MentorView from './pages/MentorView';
 import AcceptInvitation from './pages/AcceptInvitation';
 import Settings from './pages/Settings';
 import Sessions from './pages/Sessions';
@@ -39,6 +38,22 @@ import LoadingSpinner from './components/shared/LoadingSpinner';
 
 // Lazy load Admin page to reduce bundle size for non-admin users
 const Admin = lazy(() => import('./pages/Admin'));
+
+// NotFound component for catch-all route
+function NotFound() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="text-center">
+        <h1 className="text-6xl font-bold text-gray-300 mb-4">404</h1>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Page Not Found</h2>
+        <p className="text-gray-600 mb-6">The page you're looking for doesn't exist or has been moved.</p>
+        <Link to="/dashboard" className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
+          Go to Dashboard
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -120,8 +135,8 @@ function App() {
                 <Route path="/crm" element={<CRM />} />
                 <Route path="/jobs" element={<Jobs />} />
                 <Route path="/interviews" element={<Interviews />} />
+                <Route path="/mentoring" element={<Mentors />} />
                 <Route path="/mentors" element={<Mentors />} />
-                <Route path="/mentor-view" element={<MentorView />} />
                 <Route path="/accept-invitation" element={<AcceptInvitation />} />
                 <Route path="/sessions" element={<Sessions />} />
                 <Route path="/settings" element={<Settings />} />
@@ -150,6 +165,12 @@ function App() {
             <Route path="/resources" element={<Resources />} />
             <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
             <Route path="/terms_of_service" element={<TermsOfService />} />
+
+            {/* Backward-compatible redirects */}
+            <Route path="/mentor-view" element={<Navigate to="/mentoring" replace />} />
+
+            {/* Catch-all 404 route */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>

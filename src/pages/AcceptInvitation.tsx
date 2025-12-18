@@ -39,9 +39,9 @@ export default function AcceptInvitation() {
       await acceptInvitation(invitationId);
       setSuccess(true);
 
-      // Redirect to mentor view after 2 seconds
+      // Redirect to mentoring page after 2 seconds
       setTimeout(() => {
-        navigate('/mentor-view');
+        navigate('/mentoring');
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept invitation');
