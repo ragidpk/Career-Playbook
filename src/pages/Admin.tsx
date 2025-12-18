@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Users, FileText, RefreshCw, UserCheck, Handshake, Target, Settings } from 'lucide-react';
+import { Shield, Users, FileText, RefreshCw, UserCheck, Handshake, Target, Settings, Bot, Mail } from 'lucide-react';
 import { useIsAdmin, useAdminUsers, useAdminStats, useAdminPlans, useAdminMentors, useAdminPartners, useAdminTemplates } from '../hooks/useAdmin';
 import AdminStats from '../components/admin/AdminStats';
 import UserTable from '../components/admin/UserTable';
@@ -8,9 +8,11 @@ import MentorTable from '../components/admin/MentorTable';
 import PartnerTable from '../components/admin/PartnerTable';
 import TemplateTable from '../components/admin/TemplateTable';
 import SettingsPanel from '../components/admin/SettingsPanel';
+import AIPromptsPanel from '../components/admin/AIPromptsPanel';
+import EmailTemplatesPanel from '../components/admin/EmailTemplatesPanel';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
-type TabType = 'overview' | 'users' | 'plans' | 'mentors' | 'partners' | 'templates' | 'settings';
+type TabType = 'overview' | 'users' | 'plans' | 'mentors' | 'partners' | 'templates' | 'ai-prompts' | 'email-templates' | 'settings';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -38,6 +40,8 @@ export default function Admin() {
     { id: 'templates' as TabType, label: 'Templates', icon: Target },
     { id: 'mentors' as TabType, label: 'Mentors', icon: UserCheck },
     { id: 'partners' as TabType, label: 'Accountability Partners', icon: Handshake },
+    { id: 'ai-prompts' as TabType, label: 'AI Prompts', icon: Bot },
+    { id: 'email-templates' as TabType, label: 'Email Templates', icon: Mail },
     { id: 'settings' as TabType, label: 'Settings', icon: Settings },
   ];
 
@@ -193,6 +197,10 @@ export default function Admin() {
             )}
           </>
         )}
+
+        {activeTab === 'ai-prompts' && <AIPromptsPanel />}
+
+        {activeTab === 'email-templates' && <EmailTemplatesPanel />}
 
         {activeTab === 'settings' && (
           <SettingsPanel isSuperAdmin={isSuperAdmin} />
