@@ -6,8 +6,8 @@ const getBaseUrl = () => {
 };
 
 export async function signUp(email: string, password: string, fullName: string) {
-  // Ensure emailRedirectTo matches configured site URL in Supabase Auth settings
-  const redirectUrl = `${getBaseUrl()}/auth/callback`;
+  // Redirect to login page after email confirmation with success indicator
+  const redirectUrl = `${getBaseUrl()}/login?confirmed=true`;
 
   const { data, error } = await supabase.auth.signUp({
     email,

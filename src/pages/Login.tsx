@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '../utils/validation';
 import { signIn, signInWithGoogle } from '../services/auth.service';
 import Button from '../components/shared/Button';
 import Input from '../components/shared/Input';
+import { CheckCircle } from 'lucide-react';
 
 type LoginFormData = {
   email: string;
@@ -14,9 +15,18 @@ type LoginFormData = {
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Check for email confirmation success
+  useEffect(() => {
+    if (searchParams.get('confirmed') === 'true') {
+      setSuccess('Email verified successfully! You can now sign in.');
+    }
+  }, [searchParams]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -121,6 +131,12 @@ export default function Login() {
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            {success && (
+              <div className="rounded-2xl bg-success-50 border border-success-100 p-4 flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-success-500 flex-shrink-0" />
+                <p className="text-sm text-success-700">{success}</p>
+              </div>
+            )}
             {error && (
               <div className="rounded-2xl bg-error-50 border border-error-100 p-4">
                 <p className="text-sm text-error-600">{error}</p>
