@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import AvatarUpload from '../components/shared/AvatarUpload';
 import {
-  completeOnboarding,
   savePartialProfile,
   YEARS_OF_EXPERIENCE_OPTIONS,
   JOB_SEARCH_STATUS_OPTIONS,
@@ -69,7 +68,7 @@ const STEPS = [
 
 export default function Onboarding() {
   const { user } = useAuth();
-  const { profile, isLoading: profileLoading } = useProfile(user?.id);
+  const { profile, isLoading: profileLoading, completeOnboarding } = useProfile(user?.id);
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -281,7 +280,8 @@ export default function Onboarding() {
         skills: formData.skills.length > 0 ? formData.skills : null,
       };
 
-      await completeOnboarding(user.id, profileData);
+      // Use the hook's completeOnboarding which invalidates the profile cache
+      await completeOnboarding(profileData);
       // Clear localStorage draft after successful completion
       localStorage.removeItem(ONBOARDING_STORAGE_KEY);
       navigate('/dashboard');
