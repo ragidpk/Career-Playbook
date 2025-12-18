@@ -61,6 +61,28 @@ export async function completeOnboarding(
   return data as Profile;
 }
 
+export async function savePartialProfile(
+  userId: string,
+  profileData: ProfileUpdate
+): Promise<Profile> {
+  const updateData = {
+    ...profileData,
+    profile_completed: false,
+    updated_at: new Date().toISOString(),
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const profilesTable = supabase.from('profiles') as any;
+  const { data, error } = await profilesTable
+    .update(updateData)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Profile;
+}
+
 export async function isProfileComplete(userId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('profiles')

@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Briefcase, Target, ChevronRight, ChevronLeft, Check, X } from 'lucide-react';
+import { User, Briefcase, Target, ChevronRight, ChevronLeft, Check, X, Save } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useProfile } from '../hooks/useProfile';
 import AvatarUpload from '../components/shared/AvatarUpload';
 import {
   completeOnboarding,
+  savePartialProfile,
   YEARS_OF_EXPERIENCE_OPTIONS,
   JOB_SEARCH_STATUS_OPTIONS,
   WORK_PREFERENCE_OPTIONS,
@@ -13,6 +15,8 @@ import {
   SALARY_RANGE_OPTIONS,
 } from '../services/profile.service';
 import type { Database } from '../types/database.types';
+
+const ONBOARDING_STORAGE_KEY = 'career_playbook_onboarding_draft';
 
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
@@ -65,16 +69,130 @@ const STEPS = [
 
 export default function Onboarding() {
   const { user } = useAuth();
+  const { profile, isLoading: profileLoading } = useProfile(user?.id);
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    ...initialFormData,
-    full_name: user?.user_metadata?.full_name || '',
-  });
+  const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [skillInput, setSkillInput] = useState('');
   const [expertiseInput, setExpertiseInput] = useState('');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initializedRef = useRef(false);
+
+  // Load existing profile data and localStorage draft on mount
+  useEffect(() => {
+    if (initializedRef.current) return;
+
+    // First, try to load from localStorage (most recent draft)
+    const savedDraft = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        setFormData(prev => ({
+          ...prev,
+          ...parsed,
+        }));
+        initializedRef.current = true;
+        return;
+      } catch (e) {
+        console.error('Failed to parse saved draft:', e);
+      }
+    }
+
+    // If no localStorage draft, use profile data or user metadata
+    if (!profileLoading && profile) {
+      setFormData(prev => ({
+        ...prev,
+        avatar_url: profile.avatar_url || '',
+        full_name: profile.full_name || user?.user_metadata?.full_name || '',
+        phone_number: profile.phone_number || '',
+        current_location: profile.current_location || '',
+        linkedin_url: profile.linkedin_url || '',
+        years_of_experience: profile.years_of_experience || '',
+        job_title: profile.job_title || '',
+        specialization: profile.specialization || '',
+        education_level: profile.education_level || '',
+        target_role: profile.target_role || '',
+        target_industry: profile.target_industry || '',
+        job_search_status: profile.job_search_status || '',
+        work_preference: profile.work_preference || '',
+        salary_expectation: profile.salary_expectation || '',
+        areas_of_expertise: profile.areas_of_expertise || [],
+        skills: profile.skills || [],
+      }));
+      initializedRef.current = true;
+    } else if (!profileLoading) {
+      // No profile yet, just use user metadata
+      setFormData(prev => ({
+        ...prev,
+        full_name: user?.user_metadata?.full_name || '',
+      }));
+      initializedRef.current = true;
+    }
+  }, [profile, profileLoading, user]);
+
+  // Auto-save to localStorage on form changes
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(formData));
+  }, [formData]);
+
+  // Debounced auto-save to database
+  const autoSaveToDatabase = useCallback(async () => {
+    if (!user || !initializedRef.current) return;
+
+    setIsSaving(true);
+    try {
+      const profileData: ProfileUpdate = {
+        avatar_url: formData.avatar_url || null,
+        full_name: formData.full_name || null,
+        phone_number: formData.phone_number || null,
+        current_location: formData.current_location || null,
+        linkedin_url: formData.linkedin_url || null,
+        years_of_experience: formData.years_of_experience || null,
+        job_title: formData.job_title || null,
+        specialization: formData.specialization || null,
+        education_level: (formData.education_level as ProfileUpdate['education_level']) || null,
+        target_role: formData.target_role || null,
+        target_industry: formData.target_industry || null,
+        job_search_status: (formData.job_search_status as ProfileUpdate['job_search_status']) || null,
+        work_preference: (formData.work_preference as ProfileUpdate['work_preference']) || null,
+        salary_expectation: formData.salary_expectation || null,
+        areas_of_expertise: formData.areas_of_expertise.length > 0 ? formData.areas_of_expertise : null,
+        skills: formData.skills.length > 0 ? formData.skills : null,
+      };
+
+      await savePartialProfile(user.id, profileData);
+      setLastSaved(new Date());
+    } catch (err) {
+      console.error('Auto-save failed:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [user, formData]);
+
+  // Trigger debounced auto-save when form data changes
+  useEffect(() => {
+    if (!initializedRef.current) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      autoSaveToDatabase();
+    }, 3000); // Save after 3 seconds of no changes
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [formData, autoSaveToDatabase]);
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -164,12 +282,55 @@ export default function Onboarding() {
       };
 
       await completeOnboarding(user.id, profileData);
+      // Clear localStorage draft after successful completion
+      localStorage.removeItem(ONBOARDING_STORAGE_KEY);
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to save profile:', err);
       setError('Failed to save your profile. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSkip = async () => {
+    if (!user) {
+      navigate('/dashboard');
+      return;
+    }
+
+    setIsSkipping(true);
+    setError(null);
+
+    try {
+      // Save partial data before skipping
+      const profileData: ProfileUpdate = {
+        avatar_url: formData.avatar_url || null,
+        full_name: formData.full_name || null,
+        phone_number: formData.phone_number || null,
+        current_location: formData.current_location || null,
+        linkedin_url: formData.linkedin_url || null,
+        years_of_experience: formData.years_of_experience || null,
+        job_title: formData.job_title || null,
+        specialization: formData.specialization || null,
+        education_level: (formData.education_level as ProfileUpdate['education_level']) || null,
+        target_role: formData.target_role || null,
+        target_industry: formData.target_industry || null,
+        job_search_status: (formData.job_search_status as ProfileUpdate['job_search_status']) || null,
+        work_preference: (formData.work_preference as ProfileUpdate['work_preference']) || null,
+        salary_expectation: formData.salary_expectation || null,
+        areas_of_expertise: formData.areas_of_expertise.length > 0 ? formData.areas_of_expertise : null,
+        skills: formData.skills.length > 0 ? formData.skills : null,
+      };
+
+      await savePartialProfile(user.id, profileData);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Failed to save partial profile:', err);
+      // Still navigate to dashboard even if save fails
+      navigate('/dashboard');
+    } finally {
+      setIsSkipping(false);
     }
   };
 
@@ -631,14 +792,30 @@ export default function Onboarding() {
           </div>
         </div>
 
+        {/* Auto-save indicator */}
+        <div className="text-center mt-4">
+          {isSaving && (
+            <span className="inline-flex items-center gap-2 text-sm text-gray-500">
+              <Save className="w-4 h-4 animate-pulse" />
+              Saving...
+            </span>
+          )}
+          {!isSaving && lastSaved && (
+            <span className="text-sm text-gray-400">
+              Last saved: {lastSaved.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+
         {/* Skip Option */}
-        <div className="text-center mt-6">
+        <div className="text-center mt-4">
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
-            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            onClick={handleSkip}
+            disabled={isSkipping}
+            className="text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
           >
-            Skip for now, I'll complete this later
+            {isSkipping ? 'Saving progress...' : "Skip for now, I'll complete this later"}
           </button>
         </div>
       </div>
