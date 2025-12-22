@@ -7,6 +7,7 @@ import {
   updateMilestone,
   reorderMilestones,
   deletePlan,
+  createContinuationPlan,
 } from '../services/plan.service';
 import type { Database } from '../types/database.types';
 
@@ -23,7 +24,8 @@ export function usePlans(userId: string | undefined) {
   });
 
   const createPlanMutation = useMutation({
-    mutationFn: (plan: Omit<CreatePlanInput, 'user_id'>) => createPlan(userId!, plan),
+    mutationFn: ({ plan, templateId }: { plan: Omit<CreatePlanInput, 'user_id'>; templateId?: string | null }) =>
+      createPlan(userId!, plan, templateId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plans', userId] });
     },
@@ -79,6 +81,14 @@ export function usePlan(planId: string | undefined) {
     },
   });
 
+  const continuationMutation = useMutation({
+    mutationFn: ({ userId, parentPlanId, title }: { userId: string; parentPlanId: string; title: string }) =>
+      createContinuationPlan(userId, parentPlanId, title),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+    },
+  });
+
   const updateOrder = (reorderedMilestones: WeeklyMilestone[]) => {
     // Optimistically update local state
     setLocalMilestones(reorderedMilestones);
@@ -104,7 +114,9 @@ export function usePlan(planId: string | undefined) {
     error: planQuery.error,
     updateMilestone: updateMilestoneField,
     updateOrder,
+    createContinuationPlan: continuationMutation.mutateAsync,
     isUpdating: updateMilestoneMutation.isPending,
     isReordering: reorderMutation.isPending,
+    isCreatingContinuation: continuationMutation.isPending,
   };
 }

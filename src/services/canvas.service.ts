@@ -122,14 +122,28 @@ function calculateCompletionPercentage(canvasData: Partial<CareerCanvas>): numbe
   return Math.round((filledSections / sections.length) * 100);
 }
 
-// Create a new canvas
+// Create a new canvas with career goal details
+export interface CreateCanvasInput {
+  targetRole: string;
+  currentRole?: string;
+  targetDate?: string;
+  industry?: string;
+}
+
 export async function createCanvas(
   userId: string,
-  targetRole: string = 'My Career Canvas'
+  input: string | CreateCanvasInput = 'My Career Canvas'
 ): Promise<CareerCanvas> {
   if (!userId) {
     throw new Error('User ID is required to create a canvas');
   }
+
+  // Handle both string (legacy) and object input
+  const canvasData = typeof input === 'string'
+    ? { targetRole: input, currentRole: undefined, targetDate: undefined, industry: undefined }
+    : input;
+
+  const { targetRole, currentRole, targetDate, industry } = canvasData;
 
   // Check how many canvases user already has
   const existingCanvases = await getAllCanvases(userId);
@@ -148,6 +162,9 @@ export async function createCanvas(
         user_id: userId,
         name: targetRole,
         target_role: targetRole,
+        current_role: currentRole,
+        target_date: targetDate,
+        industry: industry,
         order_index: newOrderIndex,
         completion_percentage: 0,
       })
@@ -169,6 +186,9 @@ export async function createCanvas(
       user_id: userId,
       name: targetRole,
       target_role: targetRole,
+      current_role: currentRole,
+      target_date: targetDate,
+      industry: industry,
       completion_percentage: 0,
     } as any)
     .select()
@@ -257,7 +277,7 @@ export async function deleteCanvas(canvasId: string): Promise<void> {
   if (error) throw error;
 }
 
-// Link a canvas to a 90-day plan
+// Link a canvas to a 12 weeks plan
 export async function linkCanvasToPlan(canvasId: string, planId: string): Promise<CareerCanvas> {
   const { data, error } = await (supabase
     .from('career_canvas') as any)
@@ -270,7 +290,7 @@ export async function linkCanvasToPlan(canvasId: string, planId: string): Promis
   return data as CareerCanvas;
 }
 
-// Unlink a canvas from a 90-day plan
+// Unlink a canvas from a 12 weeks plan
 export async function unlinkCanvasFromPlan(canvasId: string): Promise<CareerCanvas> {
   const { data, error } = await (supabase
     .from('career_canvas') as any)
@@ -283,7 +303,7 @@ export async function unlinkCanvasFromPlan(canvasId: string): Promise<CareerCanv
   return data as CareerCanvas;
 }
 
-// Check if a canvas can have a 90-day plan created (only 1 per canvas)
+// Check if a canvas can have a 12 weeks plan created (only 1 per canvas)
 export async function canCreatePlanForCanvas(canvasId: string): Promise<boolean> {
   const canvas = await getCanvasById(canvasId);
   if (!canvas) return false;

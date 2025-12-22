@@ -337,7 +337,7 @@ export default function Templates() {
             </h1>
 
             <p className="text-xl text-gray-600 leading-relaxed mb-8">
-              Choose from our expertly crafted 90-day career plans designed for different career transitions and growth paths. Each template includes week-by-week milestones to guide your journey.
+              Choose from our expertly crafted 12-week career plans designed for different career transitions and growth paths. Each template includes week-by-week milestones to guide your journey.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4">
@@ -621,7 +621,7 @@ export default function Templates() {
             Ready to Transform Your Career?
           </h2>
           <p className="text-lg text-gray-300 mb-10 max-w-2xl mx-auto">
-            Join thousands of professionals using our proven 90-day career plans to achieve their goals.
+            Join thousands of professionals using our proven 12-week career plans to achieve their goals.
           </p>
           <Link
             to="/signup"

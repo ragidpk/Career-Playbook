@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Database } from '../types/database.types';
+import { getTemplateById } from '../data/planTemplates';
 
 type NinetyDayPlan = Database['public']['Tables']['ninety_day_plans']['Row'];
 type WeeklyMilestone = Database['public']['Tables']['weekly_milestones']['Row'];
@@ -52,7 +53,11 @@ export async function getPlan(planId: string): Promise<PlanWithMilestones> {
   return result as PlanWithMilestones;
 }
 
-export async function createPlan(userId: string, plan: Omit<CreatePlanInput, 'user_id'>): Promise<NinetyDayPlan> {
+export async function createPlan(
+  userId: string,
+  plan: Omit<CreatePlanInput, 'user_id'>,
+  templateId?: string | null
+): Promise<NinetyDayPlan> {
   const { data: planData, error: planError } = await supabase
     .from('ninety_day_plans')
     .insert({ user_id: userId, ...plan } as any)
@@ -63,14 +68,24 @@ export async function createPlan(userId: string, plan: Omit<CreatePlanInput, 'us
 
   const resultPlan = planData as any;
 
-  // Create 12 weekly milestones
-  const milestones = Array.from({ length: 12 }, (_, i) => ({
-    plan_id: resultPlan.id,
-    week_number: i + 1,
-    goal: '',
-    status: 'not_started' as const,
-    order_index: i,
-  }));
+  // Get template data if a template was selected
+  const template = templateId ? getTemplateById(templateId) : null;
+
+  // Create 12 weekly milestones (with template data if available)
+  const milestones = Array.from({ length: 12 }, (_, i) => {
+    const weekNum = i + 1;
+    const templateMilestone = template?.milestones.find(m => m.week === weekNum);
+
+    return {
+      plan_id: resultPlan.id,
+      week_number: weekNum,
+      goal: templateMilestone?.title || '',
+      subtasks: templateMilestone?.subtasks || [],
+      category: templateMilestone?.category || 'foundation',
+      status: 'not_started' as const,
+      order_index: i,
+    };
+  });
 
   const { error: milestonesError } = await supabase
     .from('weekly_milestones')
@@ -212,4 +227,97 @@ export async function generateAIMilestones(
   }
 
   return data;
+}
+
+// Create a continuation plan (next 12 weeks following a previous plan)
+export async function createContinuationPlan(
+  userId: string,
+  parentPlanId: string,
+  title: string
+): Promise<NinetyDayPlan> {
+  // Get the parent plan to determine the end date and sequence
+  const parentPlan = await getPlan(parentPlanId);
+
+  if (!parentPlan) {
+    throw new Error('Parent plan not found');
+  }
+
+  // New plan starts the day after the parent plan ends
+  const parentEndDate = new Date(parentPlan.end_date);
+  const newStartDate = new Date(parentEndDate);
+  newStartDate.setDate(newStartDate.getDate() + 1);
+
+  // New plan is 12 weeks (84 days)
+  const newEndDate = new Date(newStartDate);
+  newEndDate.setDate(newEndDate.getDate() + 83);
+
+  // Calculate the sequence number
+  const sequenceNumber = (parentPlan.sequence_number || 1) + 1;
+
+  // Create the continuation plan
+  const { data: planData, error: planError } = await supabase
+    .from('ninety_day_plans')
+    .insert({
+      user_id: userId,
+      title,
+      start_date: newStartDate.toISOString().split('T')[0],
+      end_date: newEndDate.toISOString().split('T')[0],
+      parent_plan_id: parentPlanId,
+      sequence_number: sequenceNumber,
+    } as any)
+    .select()
+    .single();
+
+  if (planError) throw planError;
+
+  const resultPlan = planData as any;
+
+  // Create 12 empty weekly milestones for the new plan
+  const milestones = Array.from({ length: 12 }, (_, i) => ({
+    plan_id: resultPlan.id,
+    week_number: i + 1,
+    goal: '',
+    status: 'not_started' as const,
+    order_index: i,
+  }));
+
+  const { error: milestonesError } = await supabase
+    .from('weekly_milestones')
+    .insert(milestones as any);
+
+  if (milestonesError) throw milestonesError;
+
+  return resultPlan as NinetyDayPlan;
+}
+
+// Get all plans in a sequence (original + continuations)
+export async function getPlanSequence(planId: string): Promise<PlanWithMilestones[]> {
+  // First, get the root plan (the one without a parent)
+  let rootPlanId = planId;
+  let currentPlan = await getPlan(planId);
+
+  while (currentPlan.parent_plan_id) {
+    rootPlanId = currentPlan.parent_plan_id;
+    currentPlan = await getPlan(rootPlanId);
+  }
+
+  // Now get all plans starting from the root
+  const allPlans: PlanWithMilestones[] = [];
+  let nextPlanId: string | null = rootPlanId;
+
+  while (nextPlanId) {
+    const plan = await getPlan(nextPlanId);
+    allPlans.push(plan);
+
+    // Find the continuation plan (where this plan is the parent)
+    const { data: childPlan } = await supabase
+      .from('ninety_day_plans')
+      .select('id')
+      .eq('parent_plan_id', nextPlanId)
+      .single() as { data: { id: string } | null; error: unknown };
+
+    nextPlanId = childPlan?.id || null;
+  }
+
+  return allPlans;
 }

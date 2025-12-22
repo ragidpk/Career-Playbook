@@ -11,7 +11,10 @@ import {
   type FeedbackScore,
 } from '../../services/feedback.service';
 
-type WeeklyMilestone = Database['public']['Tables']['weekly_milestones']['Row'];
+type WeeklyMilestone = Database['public']['Tables']['weekly_milestones']['Row'] & {
+  subtasks?: { text: string; completed: boolean }[];
+  category?: string;
+};
 
 // Category configuration for colored tags
 const CATEGORY_CONFIG: Record<string, { label: string; bgColor: string; textColor: string; dotColor: string }> = {
@@ -145,18 +148,17 @@ function WeekCard({
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [currentScore, setCurrentScore] = useState<FeedbackScore | null>(feedback?.score || null);
 
-  const category = CATEGORY_CONFIG[getWeekCategory(milestone.week_number)];
+  // Use category from database or derive from week number
+  const categoryKey = milestone.category || getWeekCategory(milestone.week_number);
+  const category = CATEGORY_CONFIG[categoryKey] || CATEGORY_CONFIG.foundation;
   const weekDates = getWeekDates(planStartDate, milestone.week_number);
   const statusConfig = STATUS_CONFIG[milestone.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.not_started;
 
-  // Parse goals into bullet points (split by newlines)
-  const goals = milestone.goal
-    ? milestone.goal.split('\n').filter(g => g.trim())
-    : [];
+  // Get subtasks from database or fall back to parsing goal
+  const subtasks = milestone.subtasks || [];
 
-  // Get milestone title (first line or generated from goal)
-  const title = goals.length > 0 ? goals[0] : `Week ${milestone.week_number}`;
-  const bulletPoints = goals.slice(1);
+  // Get title from goal field
+  const title = milestone.goal || `Week ${milestone.week_number}`;
 
   const handleToggle = () => {
     if (!readOnly && onToggleComplete) {
@@ -241,13 +243,13 @@ function WeekCard({
       {/* Title */}
       <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
 
-      {/* Bullet Points */}
-      {bulletPoints.length > 0 && (
+      {/* Subtasks */}
+      {subtasks.length > 0 && (
         <ul className="space-y-1.5 mb-3">
-          {bulletPoints.map((point, idx) => (
+          {subtasks.map((subtask, idx) => (
             <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
-              <CheckCircle2 className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-              <span>{point}</span>
+              <CheckCircle2 className={`w-4 h-4 mt-0.5 flex-shrink-0 ${subtask.completed ? 'text-green-500' : 'text-gray-400'}`} />
+              <span className={subtask.completed ? 'line-through text-gray-400' : ''}>{subtask.text}</span>
             </li>
           ))}
         </ul>

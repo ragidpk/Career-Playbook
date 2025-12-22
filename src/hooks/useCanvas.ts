@@ -10,6 +10,7 @@ import {
   deleteCanvas,
   linkCanvasToPlan,
   MAX_CANVASES,
+  type CreateCanvasInput,
 } from '../services/canvas.service';
 import type { Database } from '../types/database.types';
 
@@ -77,7 +78,7 @@ export function useMultipleCanvases(userId: string) {
 
   // Create a new canvas
   const createMutation = useMutation({
-    mutationFn: (name: string) => createCanvas(userId, name),
+    mutationFn: (input: string | CreateCanvasInput) => createCanvas(userId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['canvases', userId] });
       queryClient.invalidateQueries({ queryKey: ['canvas', userId] });

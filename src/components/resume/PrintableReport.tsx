@@ -248,11 +248,11 @@ const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
           </div>
         )}
 
-        {/* 90-Day Action Plan */}
+        {/* 12-Week Action Plan */}
         {(ninetyDay.weeks_1_4?.length || ninetyDay.weeks_5_8?.length || ninetyDay.weeks_9_12?.length) ? (
           <div style={{ marginBottom: '20px', pageBreakInside: 'avoid' }}>
             <h2 style={{ fontSize: '13pt', fontWeight: 'bold', color: '#0d9488', margin: '0 0 10px 0' }}>
-              90-Day Action Plan
+              12-Week Action Plan
             </h2>
             {ninetyDay.overview && (
               <p style={{ margin: '0 0 15px 0', fontStyle: 'italic', color: '#6b7280' }}>

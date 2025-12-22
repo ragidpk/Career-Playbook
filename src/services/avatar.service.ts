@@ -1,12 +1,8 @@
-import {
-  PutObjectCommand,
-  DeleteObjectsCommand,
-  ListObjectsV2Command,
-} from '@aws-sdk/client-s3';
-import { s3Client, AVATARS_BUCKET, AWS_REGION } from '../lib/s3';
+import { supabase } from './supabase';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const BUCKET_NAME = 'avatars';
 
 export class AvatarUploadError extends Error {
   constructor(message: string) {
@@ -26,63 +22,59 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
     throw new AvatarUploadError('File must be JPEG, PNG, WebP, or GIF');
   }
 
-  // Generate S3 key: {userId}/avatar.{ext}
+  // Generate file path: {userId}/avatar.{ext}
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const key = `${userId}/avatar.${ext}`;
+  const filePath = `${userId}/avatar.${ext}`;
 
   // Delete existing avatar first (ignore errors if doesn't exist)
   await deleteAvatar(userId).catch(() => {});
 
-  // Convert File to ArrayBuffer
-  const arrayBuffer = await file.arrayBuffer();
+  // Upload to Supabase Storage
+  const { error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
 
-  // Upload to S3
-  const command = new PutObjectCommand({
-    Bucket: AVATARS_BUCKET,
-    Key: key,
-    Body: new Uint8Array(arrayBuffer),
-    ContentType: file.type,
-    CacheControl: 'max-age=3600',
-  });
-
-  try {
-    await s3Client.send(command);
-  } catch (error) {
-    console.error('Avatar upload error:', error);
-    throw new AvatarUploadError('Failed to upload avatar. Please try again.');
+  if (error) {
+    console.error('Avatar upload error:', error.message, error);
+    throw new AvatarUploadError(`Failed to upload avatar: ${error.message}`);
   }
 
-  // Return public URL with cache-busting timestamp
-  const publicUrl = `https://${AVATARS_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}?t=${Date.now()}`;
-  return publicUrl;
+  // Get public URL with cache-busting timestamp
+  const { data: urlData } = supabase.storage
+    .from(BUCKET_NAME)
+    .getPublicUrl(filePath);
+
+  return `${urlData.publicUrl}?t=${Date.now()}`;
 }
 
 export async function deleteAvatar(userId: string): Promise<void> {
-  // List all objects in user's folder
-  const listCommand = new ListObjectsV2Command({
-    Bucket: AVATARS_BUCKET,
-    Prefix: `${userId}/`,
-  });
+  // List all files in user's folder
+  const { data: files, error: listError } = await supabase.storage
+    .from(BUCKET_NAME)
+    .list(userId);
 
-  try {
-    const listResponse = await s3Client.send(listCommand);
-    const objects = listResponse.Contents || [];
+  if (listError) {
+    console.error('Error listing avatars:', listError);
+    return;
+  }
 
-    if (objects.length > 0) {
-      const deleteCommand = new DeleteObjectsCommand({
-        Bucket: AVATARS_BUCKET,
-        Delete: {
-          Objects: objects.map((obj) => ({ Key: obj.Key })),
-        },
-      });
-      await s3Client.send(deleteCommand);
+  if (files && files.length > 0) {
+    const filesToDelete = files.map((f) => `${userId}/${f.name}`);
+    const { error: deleteError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .remove(filesToDelete);
+
+    if (deleteError) {
+      console.error('Error deleting avatars:', deleteError);
     }
-  } catch (error) {
-    console.error('Error deleting avatars:', error);
   }
 }
 
 export function getAvatarUrl(userId: string, fileName?: string): string {
-  const key = fileName ? `${userId}/${fileName}` : `${userId}/avatar`;
-  return `https://${AVATARS_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
+  const filePath = fileName ? `${userId}/${fileName}` : `${userId}/avatar`;
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+  return data.publicUrl;
 }

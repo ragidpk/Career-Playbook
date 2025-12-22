@@ -23,10 +23,16 @@ interface GenerateMilestonesRequest {
   canvasData: CareerCanvasData;
 }
 
+interface Subtask {
+  text: string;
+  completed: boolean;
+}
+
 interface WeeklyMilestone {
   week: number;
-  goal: string;
-  focus_area: string;
+  title: string;
+  subtasks: Subtask[];
+  category: 'foundation' | 'skill_development' | 'networking' | 'job_search';
 }
 
 class AppError extends Error {
@@ -39,6 +45,53 @@ class AppError extends Error {
     this.name = 'AppError';
   }
 }
+
+interface AIPromptConfig {
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  system_prompt: string;
+  user_prompt_template: string;
+}
+
+// Default prompt config (fallback if DB fetch fails)
+const DEFAULT_MILESTONE_PROMPT: AIPromptConfig = {
+  model: 'gpt-4o-mini',
+  max_tokens: 2000,
+  temperature: 0.7,
+  system_prompt: 'You are an expert career coach. Always respond with valid JSON only.',
+  user_prompt_template: `You are a career coach helping someone create a 12-week (90-day) action plan based on their Career Canvas.
+
+Based on the following Career Canvas information, generate 12 weekly milestones that will help this person achieve their career goals.
+
+Career Canvas:
+{canvasContext}
+
+Generate exactly 12 weekly milestones. Each milestone should have:
+1. A short title (2-4 words) describing the week's focus
+2. Exactly 3 specific, actionable subtasks that can be completed that week
+3. A category that matches the phase of the career journey
+
+Categories should follow this progression:
+- Weeks 1-3: "foundation" (research, self-assessment, learning basics)
+- Weeks 4-6: "skill_development" (building skills, certifications, practice)
+- Weeks 7-9: "networking" (connecting, outreach, building relationships)
+- Weeks 10-12: "job_search" (applications, interviews, negotiations)
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "milestones": [
+    {
+      "week": 1,
+      "title": "PM Foundations",
+      "subtasks": ["Read 'Inspired' by Marty Cagan", "Complete PM skills assessment", "Identify skill gaps"],
+      "category": "foundation"
+    }
+  ]
+}
+
+Make subtasks specific, measurable, and achievable within a single week.`,
+};
 
 function handleError(error: unknown): Response {
   console.error('Error in generate-milestones function:', error);
@@ -101,10 +154,10 @@ serve(async (req) => {
       throw new AppError('Missing planId', 400, 'Plan ID is required.');
     }
 
-    // Verify plan ownership
+    // Verify plan ownership and get parent plan info
     const { data: plan, error: planError } = await supabaseClient
       .from('ninety_day_plans')
-      .select('id, user_id')
+      .select('id, user_id, parent_plan_id, sequence_number')
       .eq('id', planId)
       .single();
 
@@ -114,6 +167,25 @@ serve(async (req) => {
 
     if (plan.user_id !== user.id) {
       throw new AppError('Unauthorized access to plan', 403, 'You do not have permission to modify this plan.');
+    }
+
+    // If this is a continuation plan, fetch previous plan's milestones
+    let previousMilestones: string[] = [];
+    if (plan.parent_plan_id) {
+      console.log('This is a continuation plan, fetching previous milestones...');
+      const { data: parentMilestones } = await supabaseClient
+        .from('weekly_milestones')
+        .select('goal, subtasks')
+        .eq('plan_id', plan.parent_plan_id)
+        .order('week_number', { ascending: true });
+
+      if (parentMilestones && parentMilestones.length > 0) {
+        previousMilestones = parentMilestones.map((m: any) => {
+          const subtaskTexts = m.subtasks?.map((s: any) => s.text || s).join(', ') || '';
+          return `${m.goal}${subtaskTexts ? ` (${subtaskTexts})` : ''}`;
+        });
+        console.log('Found', previousMilestones.length, 'previous milestones');
+      }
     }
 
     // Build career canvas context
@@ -135,7 +207,16 @@ serve(async (req) => {
 
     // Generate milestones with OpenAI
     console.log('Generating milestones with OpenAI...');
-    const milestones = await generateMilestonesWithAI(canvasContext, openaiApiKey);
+    const isContinuation = !!plan.parent_plan_id;
+    const sequenceNumber = plan.sequence_number || 1;
+    const milestones = await generateMilestonesWithAI(
+      canvasContext,
+      openaiApiKey,
+      supabaseClient,
+      isContinuation,
+      sequenceNumber,
+      previousMilestones
+    );
     console.log('Generated', milestones.length, 'milestones');
 
     // Get existing milestones for the plan
@@ -155,7 +236,11 @@ serve(async (req) => {
       if (existingMilestone) {
         return supabaseClient
           .from('weekly_milestones')
-          .update({ goal: milestone.goal.slice(0, 200) }) // Enforce 200 char limit
+          .update({
+            goal: milestone.title.slice(0, 200), // Title in goal field
+            subtasks: milestone.subtasks,
+            category: milestone.category,
+          })
           .eq('id', existingMilestone.id);
       }
       return Promise.resolve({ error: null });
@@ -207,31 +292,61 @@ function buildCanvasContext(canvas: CareerCanvasData): string {
 
 async function generateMilestonesWithAI(
   canvasContext: string,
-  apiKey: string
+  apiKey: string,
+  supabaseClient: any,
+  isContinuation: boolean = false,
+  sequenceNumber: number = 1,
+  previousMilestones: string[] = []
 ): Promise<WeeklyMilestone[]> {
-  const prompt = `You are a career coach helping someone create a 12-week (90-day) action plan based on their Career Canvas.
+  // Fetch prompt config from database
+  let promptConfig: AIPromptConfig = DEFAULT_MILESTONE_PROMPT;
+  try {
+    const { data: dbPrompt, error: promptError } = await supabaseClient
+      .from('ai_prompts')
+      .select('model, max_tokens, temperature, system_prompt, user_prompt_template')
+      .eq('id', 'generate-milestones')
+      .eq('is_active', true)
+      .single();
 
-Based on the following Career Canvas information, generate 12 weekly milestones that will help this person achieve their career goals. Each milestone should be a specific, actionable goal that can be accomplished in one week.
+    if (!promptError && dbPrompt) {
+      promptConfig = dbPrompt;
+      console.log('Using milestone prompt config from database');
+    } else {
+      console.log('Using default milestone prompt config');
+    }
+  } catch (e) {
+    console.log('Error fetching milestone prompt config, using default:', e);
+  }
 
-Career Canvas:
-${canvasContext}
+  // Build user prompt from template
+  let userPrompt = promptConfig.user_prompt_template
+    .replace(/{canvasContext}/g, canvasContext);
 
-Generate exactly 12 weekly milestones. Each milestone should:
-1. Be specific and actionable
-2. Build progressively toward their career goals
-3. Be achievable within a single week
-4. Be under 200 characters
+  // Add continuation context if this is a follow-up plan
+  if (isContinuation && previousMilestones.length > 0) {
+    const continuationContext = `
 
-Respond ONLY with valid JSON in this exact format:
-{
-  "milestones": [
-    { "week": 1, "goal": "Specific actionable goal for week 1", "focus_area": "networking" },
-    { "week": 2, "goal": "Specific actionable goal for week 2", "focus_area": "skills" },
-    ...
-  ]
-}
+IMPORTANT: This is a CONTINUATION PLAN (Part ${sequenceNumber} of the career journey).
 
-Focus areas can be: networking, skills, personal-brand, job-search, interview-prep, portfolio, research, or other relevant areas.`;
+The user has ALREADY COMPLETED the following milestones in their previous 12-week plan:
+${previousMilestones.map((m, i) => `Week ${i + 1}: ${m}`).join('\n')}
+
+DO NOT repeat any of the above milestones or subtasks. Generate NEW, MORE ADVANCED milestones that:
+1. Build upon the skills and progress already achieved
+2. Move to the NEXT LEVEL of career development
+3. Focus on more advanced goals, deeper specialization, or new challenges
+4. Assume foundational work is complete - skip basics and go straight to intermediate/advanced tasks
+
+For a continuation plan, use this progression instead:
+- Weeks 1-3: "skill_development" (advanced skills, specializations, certifications)
+- Weeks 4-6: "networking" (expanding network, industry events, thought leadership)
+- Weeks 7-9: "job_search" (active applications, interview preparation, negotiations)
+- Weeks 10-12: "job_search" (final push - interviews, offers, transition planning)
+`;
+    userPrompt = userPrompt + continuationContext;
+  }
+
+  console.log('Generating milestones with model:', promptConfig.model);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -240,19 +355,19 @@ Focus areas can be: networking, skills, personal-brand, job-search, interview-pr
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: promptConfig.model,
       messages: [
         {
           role: 'system',
-          content: 'You are an expert career coach. Always respond with valid JSON only.',
+          content: promptConfig.system_prompt,
         },
         {
           role: 'user',
-          content: prompt,
+          content: userPrompt,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 2000,
+      temperature: promptConfig.temperature,
+      max_tokens: promptConfig.max_tokens,
     }),
   });
 
@@ -274,19 +389,68 @@ Focus areas can be: networking, skills, personal-brand, job-search, interview-pr
   }
 
   try {
-    const parsed = JSON.parse(content);
-
-    if (!Array.isArray(parsed.milestones) || parsed.milestones.length !== 12) {
-      throw new Error('Invalid milestone count');
+    // Try to extract JSON from the response (AI sometimes adds extra text)
+    let jsonContent = content;
+    const jsonMatch = content.match(/\{[\s\S]*"milestones"[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
     }
 
-    return parsed.milestones.map((m: any, index: number) => ({
-      week: m.week || index + 1,
-      goal: String(m.goal || '').slice(0, 200),
-      focus_area: m.focus_area || 'general',
-    }));
+    const parsed = JSON.parse(jsonContent);
+
+    if (!Array.isArray(parsed.milestones) || parsed.milestones.length < 10) {
+      console.error('Invalid milestones array:', parsed);
+      throw new Error('Invalid milestone data');
+    }
+
+    const validCategories = ['foundation', 'skill_development', 'networking', 'job_search'];
+
+    // Take first 12 milestones (or pad if less)
+    const milestones = parsed.milestones.slice(0, 12);
+
+    // Pad to 12 if we have less
+    while (milestones.length < 12) {
+      const weekNum = milestones.length + 1;
+      milestones.push({
+        week: weekNum,
+        title: `Week ${weekNum} Goals`,
+        subtasks: ['Define weekly objectives', 'Track progress', 'Review and adjust'],
+        category: weekNum <= 3 ? 'foundation' : weekNum <= 6 ? 'skill_development' : weekNum <= 9 ? 'networking' : 'job_search'
+      });
+    }
+
+    return milestones.map((m: any, index: number) => {
+      // Convert subtasks array of strings to array of objects
+      const subtasks: Subtask[] = (m.subtasks || []).slice(0, 3).map((text: string) => ({
+        text: String(text).slice(0, 200),
+        completed: false,
+      }));
+
+      // Ensure at least 3 subtasks
+      while (subtasks.length < 3) {
+        subtasks.push({ text: 'Set and track goals', completed: false });
+      }
+
+      // Determine category based on week if not provided or invalid
+      let category = m.category;
+      if (!validCategories.includes(category)) {
+        const weekNum = m.week || index + 1;
+        if (weekNum <= 3) category = 'foundation';
+        else if (weekNum <= 6) category = 'skill_development';
+        else if (weekNum <= 9) category = 'networking';
+        else category = 'job_search';
+      }
+
+      return {
+        week: m.week || index + 1,
+        title: String(m.title || `Week ${index + 1}`).slice(0, 200),
+        subtasks,
+        category,
+      };
+    });
   } catch (parseError) {
     console.error('Failed to parse OpenAI response:', content);
+    console.error('Parse error:', parseError);
     throw new AppError('Failed to parse AI response', 500, 'Could not process AI response. Please try again.');
   }
 }

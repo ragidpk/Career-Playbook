@@ -80,7 +80,7 @@ const additionalFeatures = [
   },
   {
     icon: ClipboardCheck,
-    title: '90-Day Plan Builder',
+    title: '12 Weeks Career Plan',
     description: 'Break down your goals into 12-week actionable milestones with drag-and-drop organization.',
   },
   {

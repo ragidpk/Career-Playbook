@@ -23,15 +23,8 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
     refetch();
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  if (error) {
+  // Show error if any critical data failed to load
+  if (error && !overallStats) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Analytics error:', error);
     return (
@@ -45,6 +38,15 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
         >
           Try again
         </button>
+      </div>
+    );
+  }
+
+  // Show loading only for initial load when no data is available yet
+  if (isLoading && !overallStats && !funnel) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner />
       </div>
     );
   }
@@ -131,14 +133,14 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
           title="Plan Progress"
           value={`${overallStats?.planProgress || 0}%`}
           icon={Target}
-          subtitle="90-day plan completion"
+          subtitle="12 weeks plan completion"
         />
       </div>
 
       {/* Progress bars */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ProgressBar
-          title="90-Day Plan Progress"
+          title="12 Weeks Plan Progress"
           percentage={planProgress?.completionPercentage || 0}
           color="primary"
           subtitle={`${planProgress?.completed || 0} of ${planProgress?.totalMilestones || 0} milestones completed`}

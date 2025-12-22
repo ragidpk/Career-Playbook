@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Plus, User, Target, FileText } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useCanvas } from '../hooks/useCanvas';
-import { usePlan } from '../hooks/usePlan';
+import { usePlans } from '../hooks/usePlan';
 import { useSessions, useCreateSession } from '../hooks/useSession';
 import { getMentees } from '../services/mentor.service';
 import type { Mentee } from '../services/mentor.service';
@@ -39,7 +39,9 @@ export default function MentorView() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const { canvas, isLoading: canvasLoading } = useCanvas(selectedMenteeId || '');
-  const { plan, milestones, isLoading: planLoading } = usePlan(selectedMenteeId || '');
+  const { plans, isLoading: planLoading } = usePlans(selectedMenteeId || undefined);
+  const plan = plans?.[0];
+  const milestones = plan?.weekly_milestones || [];
   const { data: sessions, isLoading: sessionsLoading } = useSessions(user?.id);
   // Only enable createSession when user is authenticated
   const createSession = useCreateSession(user?.id ?? '');
@@ -219,7 +221,7 @@ export default function MentorView() {
                     }`}
                   >
                     <FileText className="w-4 h-4" />
-                    90-Day Plan
+                    12 Weeks Plan
                   </button>
                   <button
                     type="button"

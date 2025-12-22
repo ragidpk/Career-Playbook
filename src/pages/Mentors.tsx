@@ -203,7 +203,7 @@ export default function Mentors() {
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Mentor Collaboration</h2>
                 <p className="text-gray-600 text-sm mt-1">
-                  Invite mentors to view your Career Plans and 90-Day Plan
+                  Invite mentors to view your Career Plans and 12 Weeks Plan
                 </p>
               </div>
               <Button onClick={() => setShowInviteModal(true)}>
@@ -229,7 +229,7 @@ export default function Mentors() {
                   <h3 className="font-medium text-blue-900">What mentors can see:</h3>
                   <ul className="mt-2 text-sm text-blue-800 space-y-1 list-disc list-inside">
                     <li>Your Career Plans - goals, strengths, and aspirations</li>
-                    <li>Your 90-Day Plan - milestones and progress tracking</li>
+                    <li>Your 12 Weeks Plan - milestones and progress tracking</li>
                   </ul>
                   <p className="mt-2 text-sm text-blue-800">
                     Mentors have read-only access and cannot edit your data.
@@ -382,7 +382,7 @@ export default function Mentors() {
                           }`}
                         >
                           <FileText className="w-4 h-4" />
-                          90-Day Plan
+                          12 Weeks Plan
                         </button>
                         <button
                           type="button"

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Star,
   MapPin,
@@ -7,6 +8,10 @@ import {
   ExternalLink,
   Pencil,
   Trash2,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Tag,
 } from 'lucide-react';
 import { STATUS_OPTIONS } from './StatusFilter';
 import type { Company } from '../../services/company.service';
@@ -34,15 +39,47 @@ const PRIORITY_LABELS = {
   5: 'High',
 };
 
+// Extract skills from job description/notes using common patterns
+function extractSkills(text: string | null): string[] {
+  if (!text) return [];
+
+  // Common skill keywords to look for
+  const skillPatterns = [
+    // Technical
+    /\b(JavaScript|TypeScript|Python|Java|C\+\+|C#|React|Angular|Vue|Node\.js|AWS|Azure|GCP|Docker|Kubernetes|SQL|MongoDB|PostgreSQL|Redis|GraphQL|REST|API|Git|CI\/CD|Agile|Scrum)\b/gi,
+    // Soft skills
+    /\b(Leadership|Communication|Problem.?solving|Team.?work|Analytical|Strategic|Management)\b/gi,
+    // AI/ML
+    /\b(Machine Learning|ML|AI|Artificial Intelligence|Deep Learning|NLP|Computer Vision|Data Science|TensorFlow|PyTorch)\b/gi,
+    // Cloud/DevOps
+    /\b(Cloud|DevOps|Infrastructure|Terraform|Ansible|Jenkins|Linux|Unix)\b/gi,
+  ];
+
+  const skills = new Set<string>();
+  for (const pattern of skillPatterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(skill => skills.add(skill));
+    }
+  }
+
+  return Array.from(skills).slice(0, 8); // Limit to 8 skills
+}
+
 export default function CompanyCard({
   company,
   onEdit,
   onDelete,
   onToggleFavorite,
 }: CompanyCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const statusOption = STATUS_OPTIONS.find(
     (opt) => opt.value === company.status
   );
+
+  // Extract skills from notes/description
+  const skills = extractSkills(company.notes);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null;
@@ -211,10 +248,51 @@ export default function CompanyCard({
           )}
         </div>
 
-        {/* Notes preview */}
+        {/* Skills Tags */}
+        {skills.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+              <Tag className="w-3.5 h-3.5" />
+              <span>Skills Required</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {skills.map((skill, index) => (
+                <span
+                  key={index}
+                  className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-primary-50 text-primary-700"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Job Description - Expandable */}
         {company.notes && (
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-sm text-gray-600 line-clamp-2">{company.notes}</p>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-primary-600 transition-smooth"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Job Description</span>
+              {isExpanded ? (
+                <ChevronUp className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
+            <div
+              className={`bg-gray-50 rounded-xl p-3 overflow-hidden transition-all duration-300 ${
+                isExpanded ? 'max-h-96 overflow-y-auto' : 'max-h-16'
+              }`}
+            >
+              <p className={`text-sm text-gray-600 whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2' : ''}`}>
+                {company.notes}
+              </p>
+            </div>
           </div>
         )}
 

@@ -9,6 +9,8 @@ import Resources from './pages/Resources';
 import Templates from './pages/Templates';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import Help from './pages/Help';
+import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AuthCallback from './pages/AuthCallback';
@@ -23,6 +25,7 @@ import PlanEdit from './pages/PlanEdit';
 import InviteCollaborators from './pages/InviteCollaborators';
 import AcceptPlanInvitation from './pages/AcceptPlanInvitation';
 import Resume from './pages/Resume';
+import ResumeJDAnalysis from './pages/ResumeJDAnalysis';
 import ResumeBuilder from './pages/ResumeBuilder';
 import CRM from './pages/CRM';
 import Jobs from './pages/Jobs';
@@ -131,6 +134,7 @@ function App() {
                 <Route path="/plans/:id/collaborators" element={<InviteCollaborators />} />
                 <Route path="/accept-plan-invitation" element={<AcceptPlanInvitation />} />
                 <Route path="/resume" element={<Resume />} />
+                <Route path="/resume-analysis" element={<ResumeJDAnalysis />} />
                 <Route path="/resume-builder" element={<ResumeBuilder />} />
                 <Route path="/crm" element={<CRM />} />
                 <Route path="/jobs" element={<Jobs />} />
@@ -165,6 +169,8 @@ function App() {
             <Route path="/resources" element={<Resources />} />
             <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
             <Route path="/terms_of_service" element={<TermsOfService />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/contact" element={<Contact />} />
 
             {/* Backward-compatible redirects */}
             <Route path="/mentor-view" element={<Navigate to="/mentoring" replace />} />

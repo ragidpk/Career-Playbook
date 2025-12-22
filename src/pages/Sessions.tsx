@@ -209,7 +209,7 @@ export default function Sessions() {
                 ? 'When you schedule sessions with mentors or accountability partners, they will appear here.'
                 : activeTab === 'past'
                   ? 'Your completed and cancelled sessions will appear here.'
-                  : 'Start by inviting a mentor or accountability partner to your 90-day plan.'}
+                  : 'Start by inviting a mentor or accountability partner to your 12 Weeks Plan.'}
             </p>
           </div>
         )}

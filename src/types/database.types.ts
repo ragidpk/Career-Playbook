@@ -126,12 +126,56 @@ export interface Database {
           updated_at?: string
         }
       }
+      ai_prompts: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          model: string
+          max_tokens: number
+          temperature: number
+          system_prompt: string
+          user_prompt_template: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          name: string
+          description?: string | null
+          model?: string
+          max_tokens?: number
+          temperature?: number
+          system_prompt: string
+          user_prompt_template: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          model?: string
+          max_tokens?: number
+          temperature?: number
+          system_prompt?: string
+          user_prompt_template?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       career_canvas: {
         Row: {
           id: string
           user_id: string
           name: string
           target_role: string | null
+          current_role: string | null
+          target_date: string | null
+          industry: string | null
           section_1_helpers: string | null
           section_2_activities: string | null
           section_3_value: string | null
@@ -152,6 +196,9 @@ export interface Database {
           user_id: string
           name?: string
           target_role?: string | null
+          current_role?: string | null
+          target_date?: string | null
+          industry?: string | null
           section_1_helpers?: string | null
           section_2_activities?: string | null
           section_3_value?: string | null
@@ -172,6 +219,9 @@ export interface Database {
           user_id?: string
           name?: string
           target_role?: string | null
+          current_role?: string | null
+          target_date?: string | null
+          industry?: string | null
           section_1_helpers?: string | null
           section_2_activities?: string | null
           section_3_value?: string | null
@@ -195,6 +245,8 @@ export interface Database {
           title: string
           start_date: string
           end_date: string
+          parent_plan_id: string | null
+          sequence_number: number
           created_at: string
           updated_at: string
         }
@@ -204,6 +256,8 @@ export interface Database {
           title: string
           start_date: string
           end_date: string
+          parent_plan_id?: string | null
+          sequence_number?: number
           created_at?: string
           updated_at?: string
         }
@@ -213,6 +267,8 @@ export interface Database {
           title?: string
           start_date?: string
           end_date?: string
+          parent_plan_id?: string | null
+          sequence_number?: number
           created_at?: string
           updated_at?: string
         }

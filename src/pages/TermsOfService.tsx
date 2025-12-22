@@ -139,7 +139,7 @@ export default function TermsOfService() {
               Career Playbook provides a career development platform that includes:
             </p>
             <ul className="list-disc pl-6 text-gray-600 mb-8 space-y-2">
-              <li>Career planning tools and 90-day plan builders</li>
+              <li>Career planning tools and 12 weeks plan builders</li>
               <li>Career Canvas self-assessment features</li>
               <li>AI-powered milestone generation and recommendations</li>
               <li>Resume analysis and ATS scoring</li>

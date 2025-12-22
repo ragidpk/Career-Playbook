@@ -8,6 +8,8 @@ import { linkCanvasToPlan } from '../services/canvas.service';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import CanvasBusinessView from '../components/canvas/CanvasBusinessView';
 import CareerCanvasEditor from '../components/canvas/CareerCanvas';
+import CreateCanvasModal from '../components/canvas/CreateCanvasModal';
+import CanvasWizard from '../components/canvas/CanvasWizard';
 import { format, addDays } from 'date-fns';
 import {
   Plus,
@@ -20,13 +22,15 @@ import {
   Eye,
   Edit2,
   Target,
-  X,
+  Users,
+  UserCheck,
 } from 'lucide-react';
+import SharePlanModal, { type ShareMode } from '../components/shared/SharePlanModal';
 import type { Database } from '../types/database.types';
 
 type CareerCanvas = Database['public']['Tables']['career_canvas']['Row'];
 
-type ViewMode = 'list' | 'view' | 'edit';
+type ViewMode = 'list' | 'view' | 'edit' | 'wizard';
 
 export default function Canvas() {
   const { user } = useAuth();
@@ -49,22 +53,31 @@ export default function Canvas() {
   const [isCreatingManual, setIsCreatingManual] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [showNewCanvasModal, setShowNewCanvasModal] = useState(false);
-  const [newCanvasName, setNewCanvasName] = useState('');
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareMode, setShareMode] = useState<ShareMode>('accountability');
 
   // Get selected canvas data
   const selectedCanvas = canvases.find((c) => c.id === selectedCanvasId);
 
-  const handleCreateCanvas = async () => {
-    if (!newCanvasName.trim()) return;
+  const handleCreateCanvas = async (data: {
+    currentRole: string;
+    targetRole: string;
+    targetDate: string;
+    industry: string;
+  }) => {
     try {
-      const newCanvas = await create(newCanvasName.trim());
+      const newCanvas = await create({
+        targetRole: data.targetRole,
+        currentRole: data.currentRole,
+        targetDate: data.targetDate,
+        industry: data.industry,
+      });
       setShowNewCanvasModal(false);
-      setNewCanvasName('');
       setSelectedCanvasId(newCanvas.id);
-      setViewMode('edit');
+      setViewMode('wizard'); // Start wizard flow for new canvas
     } catch (error) {
       console.error('Failed to create canvas:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create canvas');
+      throw error;
     }
   };
 
@@ -90,7 +103,7 @@ export default function Canvas() {
 
   const handleEditCanvas = (canvasId: string) => {
     setSelectedCanvasId(canvasId);
-    setViewMode('edit');
+    setViewMode('wizard'); // Use wizard for editing
   };
 
   const handleBackToList = () => {
@@ -115,7 +128,7 @@ export default function Canvas() {
 
   const handleCreateManualPlan = async (canvas: CareerCanvas) => {
     if (canvas.linked_plan_id) {
-      alert('This canvas already has a linked 90-Day Plan.');
+      alert('This canvas already has a linked 12 Weeks Plan.');
       return;
     }
 
@@ -127,13 +140,16 @@ export default function Canvas() {
       const endDate = addDays(startDate, 84);
 
       const planTitle = canvas?.target_role
-        ? `90-Day Plan: ${canvas.target_role}`
-        : `90-Day Plan: ${canvas.name}`;
+        ? `12 Weeks Plan: ${canvas.target_role}`
+        : `12 Weeks Plan: ${canvas.name}`;
 
       const newPlan = await createPlan({
-        title: planTitle,
-        start_date: format(startDate, 'yyyy-MM-dd'),
-        end_date: format(endDate, 'yyyy-MM-dd'),
+        plan: {
+          title: planTitle,
+          start_date: format(startDate, 'yyyy-MM-dd'),
+          end_date: format(endDate, 'yyyy-MM-dd'),
+        },
+        templateId: null,
       });
 
       // Link the canvas to the plan
@@ -152,7 +168,7 @@ export default function Canvas() {
 
   const handleGenerateAIMilestones = async (canvas: CareerCanvas) => {
     if (canvas.linked_plan_id) {
-      alert('This canvas already has a linked 90-Day Plan.');
+      alert('This canvas already has a linked 12 Weeks Plan.');
       return;
     }
 
@@ -170,9 +186,12 @@ export default function Canvas() {
       const endDate = addDays(startDate, 84);
 
       const newPlan = await createPlan({
-        title: `90-Day Plan: ${canvas.name}`,
-        start_date: format(startDate, 'yyyy-MM-dd'),
-        end_date: format(endDate, 'yyyy-MM-dd'),
+        plan: {
+          title: `12 Weeks Plan: ${canvas.name}`,
+          start_date: format(startDate, 'yyyy-MM-dd'),
+          end_date: format(endDate, 'yyyy-MM-dd'),
+        },
+        templateId: null,
       });
 
       // Generate AI milestones for the plan
@@ -210,7 +229,178 @@ export default function Canvas() {
     );
   }
 
-  // View mode - show single canvas in business view
+  // Single canvas mode - show canvas view directly with action bar
+  if (canvases.length === 1 && viewMode === 'list') {
+    const singleCanvas = canvases[0];
+    const filledSections = getFilledSections(singleCanvas);
+    const canGenerateMilestones = filledSections.length >= 3;
+    const hasLinkedPlan = !!singleCanvas.linked_plan_id;
+
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Top Action Bar */}
+          <div className="bg-white rounded-2xl shadow-card p-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-display font-bold text-gray-900">Career Goal</h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  {singleCanvas.target_role || 'Your career canvas'}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setShowNewCanvasModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Another
+                </button>
+                <button
+                  onClick={() => handleEditCanvas(singleCanvas.id)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit Canvas
+                </button>
+                {singleCanvas.linked_plan_id ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShareMode('accountability');
+                        setShowShareModal(true);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <Users className="w-4 h-4" />
+                      Share with Partners
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShareMode('mentor');
+                        setShowShareModal(true);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      Submit to Mentor
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => navigate('/mentoring')}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                    Share with Mentor
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Canvas View */}
+          <CanvasBusinessView
+            canvas={singleCanvas}
+            canvasName={singleCanvas.name}
+            linkedPlanId={singleCanvas.linked_plan_id}
+          />
+
+          {/* Action Buttons - Next Steps */}
+          {filledSections.length > 0 && (
+            <div className="mt-8 bg-white rounded-2xl p-6 border border-gray-200 shadow-card">
+              <h3 className="text-lg font-display font-semibold text-gray-900 mb-2">
+                {hasLinkedPlan ? 'Plan Already Created' : 'Next Steps'}
+              </h3>
+              {hasLinkedPlan ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-green-600 flex items-center gap-2">
+                    <Check className="w-5 h-5" />
+                    This canvas has a linked 12 Weeks Plan
+                  </span>
+                  <button
+                    onClick={() => navigate('/plan')}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    View Plan
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Create a 12 Weeks Career Plan based on this career canvas.
+                    {!canGenerateMilestones &&
+                      ` (Complete ${3 - filledSections.length} more section${3 - filledSections.length > 1 ? 's' : ''} to enable AI generation)`}
+                  </p>
+                  {generationError && (
+                    <p className="text-sm text-error-600 mb-4">{generationError}</p>
+                  )}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => handleCreateManualPlan(singleCanvas)}
+                      disabled={isCreatingManual}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-600 text-white font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isCreatingManual ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-5 h-5" />
+                          Create Manual Plan
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => handleGenerateAIMilestones(singleCanvas)}
+                      disabled={!canGenerateMilestones || isGenerating}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5" />
+                          Generate with AI
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* New Canvas Modal */}
+        <CreateCanvasModal
+          isOpen={showNewCanvasModal}
+          onClose={() => setShowNewCanvasModal(false)}
+          onCreate={handleCreateCanvas}
+          isCreating={isCreating}
+        />
+
+        {/* Share Plan Modal */}
+        {singleCanvas.linked_plan_id && (
+          <SharePlanModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            planId={singleCanvas.linked_plan_id}
+            planTitle={singleCanvas.target_role || singleCanvas.name}
+            mode={shareMode}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // View mode - show single canvas in business view (when selected from list)
   if (viewMode === 'view' && selectedCanvas) {
     const filledSections = getFilledSections(selectedCanvas);
     const canGenerateMilestones = filledSections.length >= 3;
@@ -246,7 +436,7 @@ export default function Canvas() {
                 <div className="flex items-center gap-3">
                   <span className="text-green-600 flex items-center gap-2">
                     <Check className="w-5 h-5" />
-                    This canvas has a linked 90-Day Plan
+                    This canvas has a linked 12 Weeks Plan
                   </span>
                   <button
                     onClick={() => navigate('/plan')}
@@ -258,7 +448,7 @@ export default function Canvas() {
               ) : (
                 <>
                   <p className="text-sm text-gray-600 mb-6">
-                    Create a 90-Day Plan based on this career canvas.
+                    Create a 12 Weeks Career Plan based on this career canvas.
                     {!canGenerateMilestones &&
                       ` (Complete ${3 - filledSections.length} more section${3 - filledSections.length > 1 ? 's' : ''} to enable AI generation)`}
                   </p>
@@ -319,7 +509,26 @@ export default function Canvas() {
     );
   }
 
-  // Edit mode - show editor
+  // Wizard mode - step-by-step question flow
+  if (viewMode === 'wizard' && selectedCanvasId) {
+    return (
+      <CanvasWizardWrapper
+        canvasId={selectedCanvasId}
+        onBack={handleBackToList}
+        onComplete={() => {
+          // If only 1 canvas, go back to list to show single canvas view
+          // If multiple, go to view mode
+          if (canvases.length === 1) {
+            setViewMode('list');
+          } else {
+            setViewMode('view');
+          }
+        }}
+      />
+    );
+  }
+
+  // Edit mode - show editor (legacy full form)
   if (viewMode === 'edit' && selectedCanvasId) {
     return (
       <CanvasEditorWrapper
@@ -337,7 +546,7 @@ export default function Canvas() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">Your Career Plans</h1>
+            <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">Career Goal</h1>
             <p className="text-gray-600">
               Create up to {maxCanvases} career canvases to map different career paths.
             </p>
@@ -435,7 +644,7 @@ export default function Canvas() {
                     {hasLinkedPlan && (
                       <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
                         <Check className="w-4 h-4" />
-                        90-Day Plan linked
+                        12 Weeks Plan linked
                       </div>
                     )}
 
@@ -482,62 +691,12 @@ export default function Canvas() {
         )}
 
         {/* New Canvas Modal */}
-        {showNewCanvasModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-display font-bold text-gray-900">
-                  Create New Career Canvas
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowNewCanvasModal(false);
-                    setNewCanvasName('');
-                  }}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Career Canvas
-                </label>
-                <input
-                  type="text"
-                  value={newCanvasName}
-                  onChange={(e) => setNewCanvasName(e.target.value)}
-                  placeholder="e.g., Senior Product Manager, Data Scientist, UX Designer..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                  autoFocus
-                />
-                <p className="mt-2 text-sm text-gray-500">
-                  What role are you targeting? This helps focus your career planning.
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowNewCanvasModal(false);
-                    setNewCanvasName('');
-                  }}
-                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateCanvas}
-                  disabled={!newCanvasName.trim() || isCreating}
-                  className="flex-1 px-4 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isCreating ? 'Creating...' : 'Create Canvas'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <CreateCanvasModal
+          isOpen={showNewCanvasModal}
+          onClose={() => setShowNewCanvasModal(false)}
+          onCreate={handleCreateCanvas}
+          isCreating={isCreating}
+        />
       </div>
     </div>
   );
@@ -638,6 +797,79 @@ function CanvasEditorWrapper({
 
         {/* Editor */}
         <CareerCanvasEditor canvas={canvas} onSave={save} isSaving={isSaving} />
+      </div>
+    </div>
+  );
+}
+
+// Wrapper component for canvas wizard with its own data fetching
+function CanvasWizardWrapper({
+  canvasId,
+  onBack,
+  onComplete,
+}: {
+  canvasId: string;
+  onBack: () => void;
+  onComplete: () => void;
+}) {
+  const { canvas, isLoading, save, saveImmediate, isSaving } = useCanvasById(canvasId);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (!canvas) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Canvas not found</h2>
+          <button
+            onClick={onBack}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Back to Canvases
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to all canvases
+          </button>
+          <div className="text-right">
+            <h1 className="text-xl font-display font-bold text-gray-900">
+              {canvas.target_role || 'Career Goal'}
+            </h1>
+            {(canvas as any).current_role && (
+              <p className="text-sm text-gray-500">
+                From: {(canvas as any).current_role}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Wizard */}
+        <CanvasWizard
+          canvas={canvas}
+          onSave={save}
+          onSaveImmediate={saveImmediate}
+          onComplete={onComplete}
+          isSaving={isSaving}
+        />
       </div>
     </div>
   );

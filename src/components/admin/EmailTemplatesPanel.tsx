@@ -69,10 +69,7 @@ export default function EmailTemplatesPanel() {
       if (!session) throw new Error('Not authenticated');
 
       const { data, error: fnError } = await supabase.functions.invoke('manage-email-templates', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        body: { action: 'list' },
       });
 
       if (fnError) throw fnError;
@@ -121,11 +118,8 @@ export default function EmailTemplatesPanel() {
       if (!session) throw new Error('Not authenticated');
 
       const { data, error: fnError } = await supabase.functions.invoke('manage-email-templates', {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
         body: {
+          action: 'update',
           templateType: selectedTemplate,
           subject: editedSubject,
           content: editedContent,

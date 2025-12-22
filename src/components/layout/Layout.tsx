@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Shield,
   Camera,
+  GitCompare,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { signOut } from '../../services/auth.service';
@@ -27,14 +28,15 @@ import Avatar from '../shared/Avatar';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/canvas', label: 'Your Career Plans', icon: Target },
-  { path: '/plan', label: '90-Day Plan', icon: FileText },
-  { path: '/resume', label: 'Resume Analysis', icon: FileText },
+  { path: '/canvas', label: 'Career Goal', icon: Target },
+  { path: '/plan', label: '12 Weeks Plan', icon: FileText },
   { path: '/resume-builder', label: 'Resume Builder', icon: FilePlus },
+  { path: '/resume', label: 'Resume Analysis', icon: FileText },
+  { path: '/resume-analysis', label: 'Resume vs JD', icon: GitCompare },
   { path: '/jobs', label: 'Job Board', icon: Briefcase },
   { path: '/crm', label: 'Job Hunt CRM', icon: Building2 },
   { path: '/interviews', label: 'Interviews', icon: Calendar },
-  { path: '/mentors', label: 'Mentors', icon: Users },
+  { path: '/mentoring', label: 'Mentoring', icon: Users },
   { path: '/sessions', label: 'Sessions', icon: Calendar },
 ];
 
@@ -88,12 +90,12 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-elevated transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-elevated transform transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-5">
+        <div className="flex items-center justify-between h-16 px-5 shrink-0">
           <NavLink to="/dashboard" className="flex items-center">
             <img
               src="/images/logo.svg"
@@ -150,7 +152,7 @@ export default function Layout() {
         </nav>
 
         {/* Settings at bottom */}
-        <div className="p-3 border-t border-gray-100">
+        <div className="p-3 border-t border-gray-100 shrink-0">
           <NavLink
             to="/settings"
             onClick={() => setSidebarOpen(false)}

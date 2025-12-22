@@ -260,3 +260,50 @@ export async function isMentorView(): Promise<boolean> {
   if (error) return false;
   return (data?.length || 0) > 0;
 }
+
+/**
+ * Get mentors who have access to a job seeker's data
+ * @param jobSeekerId - The job seeker's user ID
+ * @returns Array of mentor profiles with access
+ */
+export interface MentorWithAccess {
+  mentor_id: string;
+  permission_level: 'view' | 'comment' | 'edit';
+  mentor_name?: string | null;
+  mentor_email?: string | null;
+}
+
+export async function getMentorsForJobSeeker(jobSeekerId: string): Promise<MentorWithAccess[]> {
+  const { data, error } = await supabase
+    .from('mentor_access')
+    .select(`
+      mentor_id,
+      permission_level
+    `)
+    .eq('job_seeker_id', jobSeekerId);
+
+  if (error) {
+    console.error('Error fetching mentors:', error);
+    return [];
+  }
+
+  if (!data || data.length === 0) return [];
+
+  // Get mentor profiles from profiles_public
+  const mentorIds = data.map((m: any) => m.mentor_id);
+  const { data: profiles } = await supabase
+    .from('profiles_public')
+    .select('id, full_name')
+    .in('id', mentorIds);
+
+  const profileMap: Record<string, string> = {};
+  (profiles || []).forEach((p: any) => {
+    profileMap[p.id] = p.full_name;
+  });
+
+  return data.map((m: any) => ({
+    mentor_id: m.mentor_id,
+    permission_level: m.permission_level,
+    mentor_name: profileMap[m.mentor_id] || null,
+  }));
+}

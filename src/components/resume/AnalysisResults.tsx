@@ -527,7 +527,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
         </Card>
       )}
 
-      {/* 90-Day Action Plan */}
+      {/* 12-Week Action Plan */}
       {analysis.ninety_day_strategy && (
         analysis.ninety_day_strategy.weeks_1_4?.length > 0 ||
         analysis.ninety_day_strategy.weeks_5_8?.length > 0 ||
@@ -541,7 +541,7 @@ export default function AnalysisResults({ analysis, remainingAnalyses }: Analysi
           >
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Calendar className="h-5 w-5 text-teal-500" />
-              90-Day Action Plan
+              12-Week Action Plan
             </h3>
             {expandedSections.has('plan') ? (
               <ChevronUp className="h-5 w-5 text-gray-400" />

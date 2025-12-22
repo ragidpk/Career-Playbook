@@ -11,12 +11,15 @@ import {
   Sparkles,
   ChevronDown,
   ChevronRight,
+  Send,
+  Plus,
 } from 'lucide-react';
 import { usePlan } from '../hooks/usePlan';
 import { useCanvas } from '../hooks/useCanvas';
 import { useAuth } from '../hooks/useAuth';
 import { deletePlan, generateAIMilestones, updateMilestone } from '../services/plan.service';
-import { getPlanCollaboratorsWithProfiles, type PlanCollaborator } from '../services/collaborator.service';
+import { getPlanCollaboratorsWithProfiles, updatePlanSubmissionStatus, type PlanCollaborator } from '../services/collaborator.service';
+import { getMentorsForJobSeeker, type MentorWithAccess } from '../services/mentor.service';
 import { getPlanFeedbackLatest, getPlanComments, type MilestoneFeedback, type MilestoneComment } from '../services/feedback.service';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import MilestoneGrid from '../components/plan/MilestoneGrid';
@@ -35,11 +38,15 @@ export default function PlanDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { plan, milestones, isLoading: planLoading } = usePlan(id);
+  const { plan, milestones, isLoading: planLoading, createContinuationPlan, isCreatingContinuation } = usePlan(id);
   const { canvas, isLoading: canvasLoading } = useCanvas(user?.id || '');
   const [collaborators, setCollaborators] = useState<PlanCollaborator[]>([]);
+  const [globalMentors, setGlobalMentors] = useState<MentorWithAccess[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showContinuationModal, setShowContinuationModal] = useState(false);
+  const [continuationTitle, setContinuationTitle] = useState('');
   const [showTimeline, setShowTimeline] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [feedbackMap, setFeedbackMap] = useState<Record<string, MilestoneFeedback>>({});
@@ -59,6 +66,17 @@ export default function PlanDetail() {
         });
     }
   }, [id]);
+
+  // Load global mentors (from mentor_access table)
+  useEffect(() => {
+    if (user?.id) {
+      getMentorsForJobSeeker(user.id)
+        .then(setGlobalMentors)
+        .catch((err) => {
+          console.error('Error loading global mentors:', err);
+        });
+    }
+  }, [user?.id]);
 
   // Load feedback and comments from mentors
   useEffect(() => {
@@ -83,6 +101,8 @@ export default function PlanDetail() {
     setIsDeleting(true);
     try {
       await deletePlan(id);
+      // Invalidate plans list cache so deleted plan doesn't show
+      await queryClient.invalidateQueries({ queryKey: ['plans'] });
       navigate('/plan');
     } catch (error) {
       console.error('Failed to delete plan:', error);
@@ -138,6 +158,42 @@ export default function PlanDetail() {
     }
   };
 
+  const handleSubmitForReview = async () => {
+    if (!id) return;
+
+    if (!confirm('Submit this plan to your mentor for review?')) return;
+
+    setIsSubmitting(true);
+    try {
+      await updatePlanSubmissionStatus(id, 'submitted');
+      await queryClient.invalidateQueries({ queryKey: ['plan', id] });
+    } catch (error) {
+      console.error('Failed to submit plan:', error);
+      alert('Failed to submit plan. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateContinuation = async () => {
+    if (!id || !user?.id || !continuationTitle.trim()) return;
+
+    try {
+      const newPlan = await createContinuationPlan({
+        userId: user.id,
+        parentPlanId: id,
+        title: continuationTitle.trim(),
+      });
+      setShowContinuationModal(false);
+      setContinuationTitle('');
+      // Navigate to the new plan
+      navigate(`/plans/${newPlan.id}`);
+    } catch (error) {
+      console.error('Failed to create continuation plan:', error);
+      alert('Failed to create continuation plan. Please try again.');
+    }
+  };
+
   if (planLoading || canvasLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -165,6 +221,14 @@ export default function PlanDetail() {
 
   const acceptedCollaborators = collaborators.filter((c) => c.status === 'accepted');
 
+  // Combine plan-specific collaborator mentors and global mentors for display
+  const planMentors = acceptedCollaborators.filter(c => c.role === 'mentor');
+  const allMentorNames = [
+    ...planMentors.map(c => c.collaborator_name || c.collaborator_email),
+    ...globalMentors.map(m => m.mentor_name || 'Mentor'),
+  ];
+  const hasMentor = allMentorNames.length > 0;
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -183,6 +247,13 @@ export default function PlanDetail() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowContinuationModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Next 12 Weeks
+              </button>
               <Link
                 to={`/plans/${id}/edit`}
                 className="inline-flex items-center gap-2 px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
@@ -210,10 +281,20 @@ export default function PlanDetail() {
                 {submissionStatusConfig[(plan as any).submission_status || 'draft']?.label || 'Not submitted'}
               </span>
             </div>
-            {((plan as any).submission_status || 'draft') === 'draft' && acceptedCollaborators.filter(c => c.role === 'mentor').length === 0 && (
+            {((plan as any).submission_status || 'draft') === 'draft' && !hasMentor && (
               <span className="text-gray-400 italic">
                 Add a mentor to submit your plan for review
               </span>
+            )}
+            {((plan as any).submission_status || 'draft') === 'draft' && hasMentor && (
+              <button
+                onClick={handleSubmitForReview}
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+              >
+                <Send className="w-4 h-4" />
+                {isSubmitting ? 'Submitting...' : 'Submit for Review'}
+              </button>
             )}
             {dataError && (
               <span className="text-red-500 text-xs">{dataError}</span>
@@ -225,12 +306,13 @@ export default function PlanDetail() {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-700">Collaborators ({acceptedCollaborators.length})</span>
-                {acceptedCollaborators.filter(c => c.role === 'mentor').length > 0 && (
-                  <span className="text-sm text-primary-600">
-                    - Mentor: {acceptedCollaborators.filter(c => c.role === 'mentor').map(c => c.collaborator_name || c.collaborator_email).join(', ')}
-                  </span>
-                )}
+                <span className="text-gray-700">
+                  {hasMentor ? (
+                    <>Mentor: {allMentorNames.join(', ')}</>
+                  ) : (
+                    <>Collaborators ({acceptedCollaborators.length})</>
+                  )}
+                </span>
               </div>
               <Link
                 to={`/plans/${id}/collaborators`}
@@ -293,7 +375,7 @@ export default function PlanDetail() {
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <Link
-                      to={`/plans/${id}/milestones`}
+                      to={`/plans/${id}/edit`}
                       className="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary-600 text-primary-600 font-semibold rounded-xl hover:bg-primary-50 transition-colors"
                     >
                       <Pencil className="w-5 h-5" />
@@ -341,6 +423,51 @@ export default function PlanDetail() {
             </div>
           )}
         </div>
+
+        {/* Continuation Plan Modal */}
+        {showContinuationModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
+              <h3 className="text-xl font-display font-bold text-gray-900 mb-4">
+                Add Next 12 Weeks
+              </h3>
+              <p className="text-gray-600 text-sm mb-6">
+                Create a continuation plan that starts after your current plan ends ({plan?.end_date ? format(new Date(plan.end_date), 'MMM d, yyyy') : ''}).
+              </p>
+              <div className="mb-6">
+                <label htmlFor="continuationTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                  Plan Title
+                </label>
+                <input
+                  id="continuationTitle"
+                  type="text"
+                  value={continuationTitle}
+                  onChange={(e) => setContinuationTitle(e.target.value)}
+                  placeholder={`${plan?.title || 'Plan'} - Part ${(plan?.sequence_number || 1) + 1}`}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setShowContinuationModal(false);
+                    setContinuationTitle('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateContinuation}
+                  disabled={isCreatingContinuation || !continuationTitle.trim()}
+                  className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                >
+                  {isCreatingContinuation ? 'Creating...' : 'Create Plan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

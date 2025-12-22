@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const SUPABASE_ACCESS_TOKEN = Deno.env.get('SUPABASE_ACCESS_TOKEN')!;
+const MANAGEMENT_API_TOKEN = Deno.env.get('MANAGEMENT_API_TOKEN')!;
 const PROJECT_REF = 'rdufwjhptmlpmjmcibpn';
 
 serve(async (req) => {
@@ -51,16 +51,28 @@ serve(async (req) => {
       });
     }
 
-    const method = req.method;
+    // Parse body for POST requests
+    let body: any = {};
+    if (req.method === 'POST') {
+      try {
+        const text = await req.text();
+        body = text ? JSON.parse(text) : {};
+      } catch {
+        body = {};
+      }
+    }
 
-    if (method === 'GET') {
+    // Determine action: 'list' (default) or 'update'
+    const action = body.action || 'list';
+
+    if (action === 'list') {
       // Fetch current email templates from Supabase Auth config
       const response = await fetch(
         `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${SUPABASE_ACCESS_TOKEN}`,
+            'Authorization': `Bearer ${MANAGEMENT_API_TOKEN}`,
           },
         }
       );
@@ -101,8 +113,7 @@ serve(async (req) => {
       });
     }
 
-    if (method === 'PATCH') {
-      const body = await req.json();
+    if (action === 'update') {
       const { templateType, subject, content } = body;
 
       if (!templateType) {
@@ -125,7 +136,7 @@ serve(async (req) => {
         {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${SUPABASE_ACCESS_TOKEN}`,
+            'Authorization': `Bearer ${MANAGEMENT_API_TOKEN}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(updates),
@@ -142,8 +153,8 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
+    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+      status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

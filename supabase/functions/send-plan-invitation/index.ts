@@ -45,29 +45,46 @@ serve(async (req) => {
   }
 
   try {
-    // Get Supabase client with user's auth
-    const authHeader = req.headers.get('Authorization')!;
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
+    console.log('send-plan-invitation: Starting...');
 
-    // Service role client for inserting invitation (bypasses RLS)
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Check environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    // Verify user is authenticated
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+      throw new Error('Server configuration error: Missing Supabase credentials');
+    }
+
+    if (!supabaseServiceKey) {
+      console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
+      throw new Error('Server configuration error: Missing service role key');
+    }
+
+    // Get auth header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing Authorization header. Please log in again.');
+    }
+
+    // Extract JWT token from header
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) {
+      throw new Error('Invalid Authorization header format');
+    }
+
+    console.log('send-plan-invitation: Creating Supabase clients...');
+
+    // Service role client for all operations (bypasses RLS)
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify user is authenticated using the JWT token
+    console.log('send-plan-invitation: Verifying user token...');
     const {
       data: { user },
       error: userError,
-    } = await supabaseClient.auth.getUser();
+    } = await supabaseAdmin.auth.getUser(token);
 
     if (userError) {
       console.error('Auth error:', userError);
@@ -78,7 +95,17 @@ serve(async (req) => {
       throw new Error('No authenticated user found. Please log in again.');
     }
 
+    console.log('send-plan-invitation: User verified:', user.id);
+
     // Parse request body
+    let requestBody: InvitationRequest;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      throw new Error('Invalid request body');
+    }
+
     const {
       planId,
       collaboratorEmail,
@@ -86,29 +113,40 @@ serve(async (req) => {
       personalMessage,
       jobSeekerName,
       planTitle,
-    }: InvitationRequest = await req.json();
+    } = requestBody;
 
     if (!planId || !collaboratorEmail || !role) {
       throw new Error('Missing required fields: planId, collaboratorEmail, role');
     }
 
-    // Verify user owns this plan
-    const { data: plan, error: planError } = await supabaseClient
+    console.log('send-plan-invitation: Looking up plan:', planId);
+
+    // Verify user owns this plan (use admin client to avoid RLS issues)
+    const { data: plan, error: planError } = await supabaseAdmin
       .from('ninety_day_plans')
       .select('id, user_id, title')
       .eq('id', planId)
       .single();
 
-    if (planError || !plan) {
+    if (planError) {
+      console.error('Plan query error:', planError);
+      throw new Error(`Plan lookup failed: ${planError.message}`);
+    }
+
+    if (!plan) {
       throw new Error('Plan not found');
     }
+
+    console.log('send-plan-invitation: Plan found, checking ownership...');
 
     if (plan.user_id !== user.id) {
       throw new Error('Unauthorized: You do not own this plan');
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabaseClient
+    console.log('send-plan-invitation: Getting user profile...');
+
+    // Get user profile (use admin client to bypass RLS issues)
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('full_name, email')
       .eq('id', user.id)
@@ -122,6 +160,8 @@ serve(async (req) => {
     if (!profile) {
       throw new Error('Profile not found for user');
     }
+
+    console.log('send-plan-invitation: Profile found, creating invitation...');
 
     // Generate secure token and hash it
     const rawToken = generateToken();
@@ -137,18 +177,18 @@ serve(async (req) => {
         status: 'pending',
         personal_message: personalMessage,
         invitation_token_hash: tokenHash,
-      })
-      .select('id')
-      .single();
+      });
 
     if (invitationError) {
       // Handle unique constraint violation
       if (invitationError.code === '23505') {
         throw new Error('Invitation already sent to this email for this plan');
       }
-      console.error('Invitation error:', invitationError);
-      throw new Error('Failed to create invitation');
+      console.error('Invitation error:', JSON.stringify(invitationError));
+      throw new Error(`Failed to create invitation: ${invitationError.message} (code: ${invitationError.code})`);
     }
+
+    console.log('send-plan-invitation: Invitation created, preparing email...');
 
     // Prepare email content
     const roleLabel = role === 'mentor' ? 'mentor' : 'accountability partner';

@@ -79,6 +79,16 @@ export default function NewPlanModal({ isOpen, onClose, onCreatePlan, isCreating
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Only submit if we're on the template step
+    if (step === 'details') {
+      // Move to template selection instead of submitting
+      if (title.trim()) {
+        setStep('template');
+      }
+      return;
+    }
+
     if (!title.trim()) return;
 
     await onCreatePlan(

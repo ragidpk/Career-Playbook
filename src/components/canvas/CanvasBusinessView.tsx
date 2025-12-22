@@ -140,7 +140,7 @@ export default function CanvasBusinessView({
           {linkedPlanId && (
             <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
               <Eye className="w-3 h-3" />
-              90-Day Plan Linked
+              12 Weeks Plan Linked
             </span>
           )}
           {onEdit && (
