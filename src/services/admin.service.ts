@@ -11,6 +11,7 @@ export interface UserWithStats {
   email: string;
   full_name: string | null;
   role: UserRole;
+  roles: UserRole[]; // Multiple roles support
   is_admin: boolean;
   created_at: string;
   updated_at: string;
@@ -83,6 +84,7 @@ interface AdminUserStatsRow {
   email: string;
   full_name: string | null;
   role: string;
+  roles: string[] | null; // Multiple roles from user_roles table
   is_admin: boolean;
   created_at: string;
   updated_at: string;
@@ -117,6 +119,7 @@ export async function getAllUsers(): Promise<UserWithStats[]> {
     email: user.email,
     full_name: user.full_name,
     role: user.role as UserRole,
+    roles: (user.roles || [user.role]).filter(Boolean) as UserRole[],
     is_admin: user.is_admin || false,
     created_at: user.created_at,
     updated_at: user.updated_at,
@@ -154,6 +157,7 @@ async function getAllUsersFallback(): Promise<UserWithStats[]> {
         email: user.email,
         full_name: user.full_name,
         role: user.role as UserRole,
+        roles: [user.role as UserRole], // Fallback uses single role
         is_admin: user.is_admin || false,
         created_at: user.created_at,
         updated_at: user.updated_at,
@@ -407,6 +411,7 @@ export async function getUserDetails(userId: string): Promise<UserWithStats | nu
     email: profile.email,
     full_name: profile.full_name,
     role: profile.role as UserRole,
+    roles: [profile.role as UserRole], // Fallback to single role
     is_admin: profile.is_admin || false,
     created_at: profile.created_at,
     updated_at: profile.updated_at,
@@ -761,4 +766,180 @@ export async function getAccountabilityPartners(): Promise<MentorWithMentees[]> 
       mentees,
     };
   });
+}
+
+// ============ MULTI-ROLE MANAGEMENT FUNCTIONS ============
+
+// Get user's roles from user_roles table
+export async function getUserRoles(userId: string): Promise<UserRole[]> {
+  const { data, error } = await supabase
+    .from('user_roles' as 'profiles') // Type hack for untyped table
+    .select('role')
+    .eq('user_id' as 'id', userId)
+    .order('assigned_at' as 'created_at', { ascending: true });
+
+  if (error) {
+    // Fallback to profile role if table doesn't exist
+    if (error.code === '42P01') {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      return profile ? [(profile as { role: string }).role as UserRole] : [];
+    }
+    throw error;
+  }
+
+  return ((data || []) as unknown as { role: string }[]).map((r) => r.role as UserRole);
+}
+
+// Add role to user (super admin only)
+export async function addUserRole(userId: string, role: UserRole): Promise<void> {
+  const isSuperAdmin = await checkIsSuperAdmin();
+  if (!isSuperAdmin) {
+    throw new Error('Only super admins can assign roles');
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { error } = await (supabase
+    .from('user_roles' as 'profiles') as unknown as { insert: (data: Record<string, unknown>) => Promise<{ error: { code?: string; message: string } | null }> })
+    .insert({
+      user_id: userId,
+      role: role,
+      assigned_by: user?.id,
+    });
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('User already has this role');
+    }
+    throw error;
+  }
+
+  // Update primary role and is_admin flag if needed
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  if (isAdmin) {
+    await supabase
+      .from('profiles')
+      // @ts-expect-error - Supabase typing issue
+      .update({ is_admin: true })
+      .eq('id', userId);
+  }
+}
+
+// Remove role from user (super admin only)
+export async function removeUserRole(userId: string, role: UserRole): Promise<void> {
+  const isSuperAdmin = await checkIsSuperAdmin();
+  if (!isSuperAdmin) {
+    throw new Error('Only super admins can remove roles');
+  }
+
+  // Prevent removing the last role
+  const currentRoles = await getUserRoles(userId);
+  if (currentRoles.length <= 1) {
+    throw new Error('Cannot remove the last role. User must have at least one role.');
+  }
+
+  // Prevent super admin from removing their own super_admin role
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.id === userId && role === 'super_admin') {
+    throw new Error('Cannot remove your own super admin role');
+  }
+
+  const { error } = await supabase
+    .from('user_roles' as 'profiles')
+    .delete()
+    .eq('user_id' as 'id', userId)
+    .eq('role' as 'email', role);
+
+  if (error) throw error;
+
+  // Update is_admin flag if no admin roles remain
+  const remainingRoles = currentRoles.filter(r => r !== role);
+  const hasAdminRole = remainingRoles.some(r => r === 'admin' || r === 'super_admin');
+
+  if (!hasAdminRole) {
+    await supabase
+      .from('profiles')
+      // @ts-expect-error - Supabase typing issue
+      .update({ is_admin: false })
+      .eq('id', userId);
+  }
+
+  // Update primary role to highest remaining role
+  const roleHierarchy: UserRole[] = ['super_admin', 'admin', 'mentor', 'job_seeker'];
+  const newPrimaryRole = roleHierarchy.find(r => remainingRoles.includes(r)) || 'job_seeker';
+
+  await supabase
+    .from('profiles')
+    // @ts-expect-error - Supabase typing issue
+    .update({ role: newPrimaryRole })
+    .eq('id', userId);
+}
+
+// Update all roles for a user (super admin only)
+export async function updateUserRoles(userId: string, roles: UserRole[]): Promise<void> {
+  const isSuperAdmin = await checkIsSuperAdmin();
+  if (!isSuperAdmin) {
+    throw new Error('Only super admins can manage roles');
+  }
+
+  if (roles.length === 0) {
+    throw new Error('User must have at least one role');
+  }
+
+  // Prevent super admin from removing their own super_admin role
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.id === userId) {
+    const currentRoles = await getUserRoles(userId);
+    if (currentRoles.includes('super_admin') && !roles.includes('super_admin')) {
+      throw new Error('Cannot remove your own super admin role');
+    }
+  }
+
+  // Delete existing roles
+  await supabase
+    .from('user_roles' as 'profiles')
+    .delete()
+    .eq('user_id' as 'id', userId);
+
+  // Insert new roles
+  const { error } = await (supabase
+    .from('user_roles' as 'profiles') as unknown as { insert: (data: Record<string, unknown>[]) => Promise<{ error: { code?: string; message: string } | null }> })
+    .insert(roles.map(role => ({
+      user_id: userId,
+      role: role,
+      assigned_by: user?.id,
+    })));
+
+  if (error) throw error;
+
+  // Update profile with primary role and is_admin flag
+  const roleHierarchy: UserRole[] = ['super_admin', 'admin', 'mentor', 'job_seeker'];
+  const primaryRole = roleHierarchy.find(r => roles.includes(r)) || 'job_seeker';
+  const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+
+  await supabase
+    .from('profiles')
+    // @ts-expect-error - Supabase typing issue
+    .update({ role: primaryRole, is_admin: isAdmin })
+    .eq('id', userId);
+}
+
+// ============ PASSWORD RESET FUNCTIONS ============
+
+// Send password reset email to user (super admin only)
+export async function sendPasswordResetEmail(email: string): Promise<void> {
+  const isSuperAdmin = await checkIsSuperAdmin();
+  if (!isSuperAdmin) {
+    throw new Error('Only super admins can send password reset emails');
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+
+  if (error) throw error;
 }

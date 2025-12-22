@@ -12,6 +12,8 @@ import {
   getAllMentors,
   getAllMentorInvitations,
   getAccountabilityPartners,
+  updateUserRoles,
+  sendPasswordResetEmail,
   type UserWithStats,
   type AdminStats,
   type PlanWithUser,
@@ -100,7 +102,16 @@ export function useAdminUsers() {
     await loadUsers(); // Refresh the list
   };
 
-  return { users, isLoading, error, refresh: loadUsers, changeRole, changeResumeLimit, editUser, removeUser };
+  const changeRoles = async (userId: string, roles: UserRole[]) => {
+    await updateUserRoles(userId, roles);
+    await loadUsers(); // Refresh the list
+  };
+
+  const sendPasswordReset = async (email: string) => {
+    await sendPasswordResetEmail(email);
+  };
+
+  return { users, isLoading, error, refresh: loadUsers, changeRole, changeRoles, changeResumeLimit, editUser, removeUser, sendPasswordReset };
 }
 
 // Hook to get admin stats

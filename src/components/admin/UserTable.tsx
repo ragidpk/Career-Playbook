@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { Search, ChevronDown, FileText, Building2, Target, File, Sparkles, Pencil, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Search, ChevronDown, FileText, Building2, Target, File, Sparkles, Pencil, Trash2, X, AlertTriangle, KeyRound, Check } from 'lucide-react';
 import type { UserWithStats, UserRole, UserEditData } from '../../services/admin.service';
-import RoleSelector from './RoleSelector';
+import MultiRoleSelector from './MultiRoleSelector';
 import LimitEditor from './LimitEditor';
 
 interface UserTableProps {
   users: UserWithStats[];
   onRoleChange: (userId: string, role: UserRole) => Promise<void>;
+  onRolesChange: (userId: string, roles: UserRole[]) => Promise<void>;
   onLimitChange: (userId: string, limit: number) => Promise<void>;
   onEditUser: (userId: string, data: UserEditData) => Promise<void>;
   onDeleteUser: (userId: string) => Promise<void>;
+  onSendPasswordReset: (email: string) => Promise<void>;
   isSuperAdmin: boolean;
 }
 
@@ -23,7 +25,15 @@ interface DeleteModalState {
   user: UserWithStats | null;
 }
 
-export default function UserTable({ users, onRoleChange, onLimitChange, onEditUser, onDeleteUser, isSuperAdmin }: UserTableProps) {
+interface PasswordResetState {
+  userId: string | null;
+  status: 'idle' | 'sending' | 'sent' | 'error';
+  error?: string;
+}
+
+export default function UserTable({ users, onRoleChange: _onRoleChange, onRolesChange, onLimitChange, onEditUser, onDeleteUser, onSendPasswordReset, isSuperAdmin }: UserTableProps) {
+  // Note: onRoleChange kept for backward compatibility but replaced by onRolesChange
+  void _onRoleChange;
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [sortBy, setSortBy] = useState<'created_at' | 'email' | 'full_name'>('created_at');
@@ -32,6 +42,29 @@ export default function UserTable({ users, onRoleChange, onLimitChange, onEditUs
   const [deleteModal, setDeleteModal] = useState<DeleteModalState>({ isOpen: false, user: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editFormData, setEditFormData] = useState<UserEditData>({});
+  const [passwordResetState, setPasswordResetState] = useState<PasswordResetState>({ userId: null, status: 'idle' });
+
+  const handleSendPasswordReset = async (user: UserWithStats) => {
+    setPasswordResetState({ userId: user.id, status: 'sending' });
+    try {
+      await onSendPasswordReset(user.email);
+      setPasswordResetState({ userId: user.id, status: 'sent' });
+      // Reset after 3 seconds
+      setTimeout(() => {
+        setPasswordResetState({ userId: null, status: 'idle' });
+      }, 3000);
+    } catch (error) {
+      setPasswordResetState({
+        userId: user.id,
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Failed to send reset email',
+      });
+      // Reset after 3 seconds
+      setTimeout(() => {
+        setPasswordResetState({ userId: null, status: 'idle' });
+      }, 3000);
+    }
+  };
 
   // Filter and sort users
   const filteredUsers = users
@@ -192,7 +225,7 @@ export default function UserTable({ users, onRoleChange, onLimitChange, onEditUs
                   </div>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
+                  Roles
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -237,13 +270,24 @@ export default function UserTable({ users, onRoleChange, onLimitChange, onEditUs
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeClass(
-                        user.role
-                      )}`}
-                    >
-                      {user.role.replace('_', ' ')}
-                    </span>
+                    {isSuperAdmin ? (
+                      <MultiRoleSelector
+                        currentRoles={user.roles || [user.role]}
+                        userId={user.id}
+                        onRolesChange={onRolesChange}
+                      />
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {(user.roles || [user.role]).map((role) => (
+                          <span
+                            key={role}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeClass(role)}`}
+                          >
+                            {role.replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500">
                     {formatDate(user.created_at)}
@@ -278,11 +322,32 @@ export default function UserTable({ users, onRoleChange, onLimitChange, onEditUs
                   {isSuperAdmin && (
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <RoleSelector
-                          currentRole={user.role}
-                          userId={user.id}
-                          onRoleChange={onRoleChange}
-                        />
+                        <button
+                          onClick={() => handleSendPasswordReset(user)}
+                          disabled={passwordResetState.userId === user.id && passwordResetState.status === 'sending'}
+                          className={`p-2 rounded-lg transition-colors ${
+                            passwordResetState.userId === user.id && passwordResetState.status === 'sent'
+                              ? 'text-green-600 bg-green-50'
+                              : passwordResetState.userId === user.id && passwordResetState.status === 'error'
+                              ? 'text-red-600 bg-red-50'
+                              : 'text-gray-500 hover:text-amber-600 hover:bg-amber-50'
+                          }`}
+                          title={
+                            passwordResetState.userId === user.id && passwordResetState.status === 'sent'
+                              ? 'Reset email sent!'
+                              : passwordResetState.userId === user.id && passwordResetState.status === 'error'
+                              ? passwordResetState.error
+                              : 'Send password reset email'
+                          }
+                        >
+                          {passwordResetState.userId === user.id && passwordResetState.status === 'sending' ? (
+                            <div className="h-4 w-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                          ) : passwordResetState.userId === user.id && passwordResetState.status === 'sent' ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <KeyRound className="h-4 w-4" />
+                          )}
+                        </button>
                         <button
                           onClick={() => openEditModal(user)}
                           className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"

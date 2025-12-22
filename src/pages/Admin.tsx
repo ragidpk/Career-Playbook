@@ -18,7 +18,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const { isSuperAdmin } = useIsAdmin();
   const { stats, isLoading: statsLoading, error: statsError, refresh: refreshStats } = useAdminStats();
-  const { users, isLoading: usersLoading, error: usersError, refresh: refreshUsers, changeRole, changeResumeLimit, editUser, removeUser } = useAdminUsers();
+  const { users, isLoading: usersLoading, error: usersError, refresh: refreshUsers, changeRole, changeRoles, changeResumeLimit, editUser, removeUser, sendPasswordReset } = useAdminUsers();
   const { plans, isLoading: plansLoading, error: plansError, refresh: refreshPlans } = useAdminPlans();
   const { mentors, invitations, isLoading: mentorsLoading, error: mentorsError, refresh: refreshMentors } = useAdminMentors();
   const { partners, isLoading: partnersLoading, error: partnersError, refresh: refreshPartners } = useAdminPartners();
@@ -119,9 +119,11 @@ export default function Admin() {
               <UserTable
                 users={users}
                 onRoleChange={changeRole}
+                onRolesChange={changeRoles}
                 onLimitChange={changeResumeLimit}
                 onEditUser={editUser}
                 onDeleteUser={removeUser}
+                onSendPasswordReset={sendPasswordReset}
                 isSuperAdmin={isSuperAdmin}
               />
             )}
